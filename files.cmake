@@ -1,5 +1,7 @@
 set(SRC_FILES
     App.cpp
+    Character.cpp
+    TileMap.cpp
 )
 
 set(INCLUDE_FILES

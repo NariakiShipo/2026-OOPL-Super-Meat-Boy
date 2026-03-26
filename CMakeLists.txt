@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(REPLACE_WITH_YOUR_PROJECT_NAME)
+project(SuperMeatBoy)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -20,7 +20,17 @@ FetchContent_Declare(
     SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/PTSD
 )
 
+FetchContent_Declare(
+    tmxlite
+
+    GIT_REPOSITORY  https://github.com/fallahn/tmxlite.git
+    GIT_TAG         v1.4.4
+
+    SOURCE_SUBDIR   tmxlite
+)
+
 FetchContent_MakeAvailable(ptsd)
+FetchContent_MakeAvailable(tmxlite)
 
 include(files.cmake)
 set(SRC_DIR ${CMAKE_SOURCE_DIR}/src)
@@ -57,4 +67,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/i
 target_link_libraries(${PROJECT_NAME}
     SDL2::SDL2main
     PTSD
+    tmxlite
 )
+
