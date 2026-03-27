@@ -1,5 +1,9 @@
 set(SRC_FILES
     AppStart.cpp
+    AppPlayer.cpp
+    AppCollision.cpp
+    AppMovement.cpp
+    AppCamera.cpp
     AppUpdate.cpp
     AppEnd.cpp
     common/AssetPath.cpp
