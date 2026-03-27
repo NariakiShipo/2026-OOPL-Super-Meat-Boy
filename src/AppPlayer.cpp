@@ -64,6 +64,7 @@ void App::RespawnPlayer() {
     m_PlayerOnWall = false;
     m_WallJumpDirection = 0.0F;
     m_WallControlLockTimerMs = 0.0F;
+    m_WallReattachCooldownMs = 0.0F;
     m_PlayerAnimState = PlayerAnimState::IDLE;
     m_PlayerFacingRight = true;
     ApplyPlayerDrawable(m_PlayerIdleDrawable);

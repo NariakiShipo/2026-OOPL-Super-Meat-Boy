@@ -10,15 +10,20 @@ void App::StepPlayer(const float dtMs) {
     const float dtSec = dtMs / 1000.0F;
     constexpr float moveSpeed = 360.0F;
     constexpr float sprintMultiplier = 1.8F;
-    constexpr float jumpVelocity = 1000.0F;
+    constexpr float jumpVelocity = 500.0F;
     constexpr float jumpHoldMaxMs = 170.0F;
-    constexpr float jumpHoldBoost = 1500.0F;
+    constexpr float jumpHoldBoost = 2000.0F;
     constexpr float shortHopCutRatio = 0.42F;
     constexpr float wallJumpHorizontalVelocity = 430.0F;
     constexpr float wallJumpControlLockMs = 140.0F;
+    constexpr float wallReattachCooldownMs = 110.0F;
     constexpr float wallSlideMaxFallSpeed = 260.0F;
     constexpr float gravity = -1800.0F;
     constexpr float killY = -520.0F;
+
+    if (m_WallReattachCooldownMs > 0.0F) {
+        m_WallReattachCooldownMs = std::max(0.0F, m_WallReattachCooldownMs - dtMs);
+    }
 
     float moveAxis = 0.0F;
     if (Util::Input::IsKeyPressed(Util::Keycode::A) ||
@@ -52,6 +57,7 @@ void App::StepPlayer(const float dtMs) {
         if (canWallJump) {
             m_PlayerVelocity.x = wallJumpHorizontalVelocity * m_WallJumpDirection;
             m_WallControlLockTimerMs = wallJumpControlLockMs;
+            m_WallReattachCooldownMs = wallReattachCooldownMs;
             m_PlayerOnWall = false;
             m_WallJumpDirection = 0.0F;
         }

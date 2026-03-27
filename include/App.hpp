@@ -84,6 +84,7 @@ private:
     bool m_PlayerOnWall = false;
     float m_WallJumpDirection = 0.0F;
     float m_WallControlLockTimerMs = 0.0F;
+    float m_WallReattachCooldownMs = 0.0F;
     bool m_LevelCleared = false;
     int m_RespawnCount = 0;
 };

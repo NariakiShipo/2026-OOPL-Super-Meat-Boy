@@ -3,6 +3,9 @@
 #include "game/Collision.hpp"
 
 void App::ResolvePlayerPlatformCollisions(const glm::vec2 &previousPosition) {
+    constexpr float wallBounceMinSpeed = 100.0F;
+    constexpr float wallBounceDamping = 0.22F;
+
     const auto makePlayerAabb = [this]() {
         return Game::MakeAabb(m_Player->m_Transform.translation,
                               m_PlayerColliderSize);
@@ -60,9 +63,18 @@ void App::ResolvePlayerPlatformCollisions(const glm::vec2 &previousPosition) {
             m_Player->m_Transform.translation.x += overlapX;
             sideDirection = 1.0F;
         }
-        m_PlayerVelocity.x = 0.0F;
-        m_PlayerOnWall = true;
-        m_WallJumpDirection = sideDirection;
+
+        const float incomingVelocityX = m_PlayerVelocity.x;
+        if (std::abs(incomingVelocityX) > wallBounceMinSpeed) {
+            m_PlayerVelocity.x = -incomingVelocityX * wallBounceDamping;
+        } else {
+            m_PlayerVelocity.x = 0.0F;
+        }
+
+        if (m_WallReattachCooldownMs <= 0.0F) {
+            m_PlayerOnWall = true;
+            m_WallJumpDirection = sideDirection;
+        }
         playerAabb = makePlayerAabb();
     }
 }
