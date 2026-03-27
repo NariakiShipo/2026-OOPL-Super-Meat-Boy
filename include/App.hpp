@@ -5,28 +5,14 @@
 
 #include "Core/Drawable.hpp"
 
+#include "game/LevelData.hpp"
+
 #include "Util/GameObject.hpp"
 #include "Util/Renderer.hpp"
 #include "Util/Text.hpp"
 
 class App {
 public:
-    struct LevelObjectConfig {
-        glm::vec2 position;
-        glm::vec2 size;
-        float zIndex;
-        std::string texturePath;
-    };
-
-    struct LevelConfig {
-        glm::vec2 spawn;
-        glm::vec2 goalPosition;
-        glm::vec2 goalSize;
-        std::string goalTexturePath;
-        std::vector<LevelObjectConfig> platforms;
-        std::vector<LevelObjectConfig> deathZones;
-    };
-
     enum class PlayerAnimState {
         IDLE,
         RUN,
@@ -84,7 +70,7 @@ private:
     std::shared_ptr<Util::GameObject> m_StatusBoard;
     std::shared_ptr<Util::Text> m_StatusText;
 
-    std::vector<LevelConfig> m_Levels;
+    std::vector<Game::LevelConfig> m_Levels;
     std::size_t m_CurrentLevelIndex = 0;
 
     glm::vec2 m_CameraPosition = {0.0F, 0.0F};
@@ -92,7 +78,12 @@ private:
     glm::vec2 m_PlayerSpawn = {-520.0F, -40.0F};
     glm::vec2 m_PlayerColliderSize = {96.0F, 96.0F};
     glm::vec2 m_PlayerVelocity = {0.0F, 0.0F};
+    bool m_IsJumping = false;
+    float m_JumpHoldTimerMs = 0.0F;
     bool m_PlayerOnGround = false;
+    bool m_PlayerOnWall = false;
+    float m_WallJumpDirection = 0.0F;
+    float m_WallControlLockTimerMs = 0.0F;
     bool m_LevelCleared = false;
     int m_RespawnCount = 0;
 };
