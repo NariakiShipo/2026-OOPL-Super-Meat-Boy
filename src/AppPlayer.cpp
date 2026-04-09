@@ -58,6 +58,7 @@ void App::UpdatePlayerAnimation(const float moveAxis) {
 void App::RespawnPlayer() {
     m_Player->m_Transform.translation = m_PlayerSpawn;
     m_PlayerVelocity = {0.0F, 0.0F};
+    m_CameraLookaheadOffset = {0.0F, 0.0F};
     m_IsJumping = false;
     m_JumpHoldTimerMs = 0.0F;
     m_PlayerOnGround = false;

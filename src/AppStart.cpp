@@ -1,12 +1,32 @@
 #include "App.hpp"
 
 #include "common/AssetPath.hpp"
+#include "game/Collision.hpp"
 #include "game/LevelData.hpp"
+
+#include "config.hpp"
 
 #include "Util/Image.hpp"
 #include "Util/Logger.hpp"
 #include "Util/Text.hpp"
 #include "Util/TransformUtils.hpp"
+
+namespace {
+void ExpandAabb(Game::Aabb &target, const Game::Aabb &incoming) {
+    target.minX = std::min(target.minX, incoming.minX);
+    target.maxX = std::max(target.maxX, incoming.maxX);
+    target.minY = std::min(target.minY, incoming.minY);
+    target.maxY = std::max(target.maxY, incoming.maxY);
+}
+
+float ClampToRangeOrCenter(const float value, const float minValue,
+                           const float maxValue) {
+    if (minValue > maxValue) {
+        return (minValue + maxValue) * 0.5F;
+    }
+    return std::clamp(value, minValue, maxValue);
+}
+} // namespace
 
 std::shared_ptr<Util::GameObject> App::CreatePlatform(const glm::vec2 &position,
                                                       const glm::vec2 &size,
@@ -98,7 +118,48 @@ void App::LoadLevel(const std::size_t levelIndex) {
     m_Root.AddChild(m_StatusBoard);
 
     m_PlayerSpawn = level.spawn;
-    m_CameraPosition = m_PlayerSpawn;
+    m_CameraLookaheadOffset = {0.0F, 0.0F};
+
+    auto worldBounds = Game::MakeAabb(m_PlayerSpawn, m_PlayerColliderSize);
+    for (const auto &platform : m_Platforms) {
+        ExpandAabb(worldBounds, Game::GetAabb(platform));
+    }
+    if (m_GoalFlag != nullptr) {
+        ExpandAabb(worldBounds, Game::GetAabb(m_GoalFlag));
+    }
+
+    const glm::vec2 halfWindow = {
+        static_cast<float>(WINDOW_WIDTH) * 0.5F,
+        static_cast<float>(WINDOW_HEIGHT) * 0.5F,
+    };
+
+    const float minCameraX = worldBounds.minX + halfWindow.x;
+    const float maxCameraX = worldBounds.maxX - halfWindow.x;
+    const float minCameraY = worldBounds.minY + halfWindow.y;
+    const float maxCameraY = worldBounds.maxY - halfWindow.y;
+
+    if (minCameraX <= maxCameraX) {
+        m_CameraBoundsMin.x = minCameraX;
+        m_CameraBoundsMax.x = maxCameraX;
+    } else {
+        const float centerX = (worldBounds.minX + worldBounds.maxX) * 0.5F;
+        m_CameraBoundsMin.x = centerX;
+        m_CameraBoundsMax.x = centerX;
+    }
+
+    if (minCameraY <= maxCameraY) {
+        m_CameraBoundsMin.y = minCameraY;
+        m_CameraBoundsMax.y = maxCameraY;
+    } else {
+        const float centerY = (worldBounds.minY + worldBounds.maxY) * 0.5F;
+        m_CameraBoundsMin.y = centerY;
+        m_CameraBoundsMax.y = centerY;
+    }
+
+    m_CameraPosition.x = ClampToRangeOrCenter(
+        m_PlayerSpawn.x, m_CameraBoundsMin.x, m_CameraBoundsMax.x);
+    m_CameraPosition.y = ClampToRangeOrCenter(
+        m_PlayerSpawn.y, m_CameraBoundsMin.y, m_CameraBoundsMax.y);
     Util::SetCameraPosition(m_CameraPosition);
 
     m_LevelCleared = false;

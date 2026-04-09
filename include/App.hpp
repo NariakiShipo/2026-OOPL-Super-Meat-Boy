@@ -74,6 +74,18 @@ private:
     std::size_t m_CurrentLevelIndex = 0;
 
     glm::vec2 m_CameraPosition = {0.0F, 0.0F};
+    glm::vec2 m_CameraBoundsMin = {0.0F, 0.0F};
+    glm::vec2 m_CameraBoundsMax = {0.0F, 0.0F};
+    glm::vec2 m_CameraLookaheadOffset = {0.0F, 0.0F};
+
+    float m_CameraDeadZoneHalfWidth = 150.0F;
+    float m_CameraDeadZoneHalfHeight = 90.0F;
+    float m_CameraFollowSpeed = 6.0F;
+    float m_CameraLookaheadTime = 0.22F;
+    float m_CameraLookaheadResponse = 8.0F;
+    float m_CameraLookaheadMaxX = 220.0F;
+    float m_CameraLookaheadMaxUp = 110.0F;
+    float m_CameraLookaheadMaxDown = 260.0F;
 
     glm::vec2 m_PlayerSpawn = {-520.0F, -40.0F};
     glm::vec2 m_PlayerColliderSize = {96.0F, 96.0F};
