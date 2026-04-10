@@ -46,7 +46,10 @@ private:
     std::shared_ptr<Util::GameObject> CreatePlatform(const glm::vec2 &position,
                                                      const glm::vec2 &size,
                                                      float zIndex,
-                                                     const std::string &texturePath) const;
+                                                     const std::string &texturePath,
+                                                     const glm::vec4 &uvRect =
+                                                         {0.0F, 0.0F, 1.0F, 1.0F},
+                                                     bool visible = true) const;
 
 private:
     State m_CurrentState = State::START;
@@ -65,6 +68,7 @@ private:
 
     std::vector<std::shared_ptr<Util::GameObject>> m_Platforms;
     std::vector<std::shared_ptr<Util::GameObject>> m_DeathZones;
+    std::vector<std::shared_ptr<Util::GameObject>> m_LevelRenderTiles;
     std::shared_ptr<Util::GameObject> m_GoalFlag;
 
     std::shared_ptr<Util::GameObject> m_StatusBoard;

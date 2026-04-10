@@ -20,7 +20,21 @@ FetchContent_Declare(
     SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/PTSD
 )
 
+FetchContent_Declare(
+    tmxlite
+
+    URL         https://github.com/fallahn/tmxlite/archive/refs/tags/v1.3.1.zip
+
+    SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/lib/tmxlite
+)
+
 FetchContent_MakeAvailable(ptsd)
+
+FetchContent_GetProperties(tmxlite)
+if (NOT ${tmxlite_POPULATED})
+    FetchContent_Populate(tmxlite)
+    add_subdirectory(${tmxlite_SOURCE_DIR}/tmxlite ${tmxlite_BINARY_DIR})
+endif()
 
 include(files.cmake)
 set(SRC_DIR ${CMAKE_SOURCE_DIR}/src)
@@ -57,4 +71,5 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/i
 target_link_libraries(${PROJECT_NAME}
     SDL2::SDL2main
     PTSD
+    tmxlite
 )

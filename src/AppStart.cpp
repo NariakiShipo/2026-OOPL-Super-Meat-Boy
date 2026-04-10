@@ -1,6 +1,7 @@
 #include "App.hpp"
 
 #include "common/AssetPath.hpp"
+#include "game/BoxDrawable.hpp"
 #include "game/Collision.hpp"
 #include "game/LevelData.hpp"
 
@@ -31,20 +32,35 @@ float ClampToRangeOrCenter(const float value, const float minValue,
 std::shared_ptr<Util::GameObject> App::CreatePlatform(const glm::vec2 &position,
                                                       const glm::vec2 &size,
                                                       const float zIndex,
-                                                      const std::string &texturePath) const {
+                                                      const std::string &texturePath,
+                                                      const glm::vec4 &uvRect,
+                                                      const bool visible) const {
     auto platform = std::make_shared<Util::GameObject>();
-    auto sprite =
-        std::make_shared<Util::Image>(Common::ResolveAssetPath(texturePath));
 
-    platform->SetDrawable(sprite);
+    if (texturePath.empty()) {
+        platform->SetDrawable(std::make_shared<Game::BoxDrawable>(size));
+        platform->m_Transform.scale = {1.0F, 1.0F};
+    } else {
+        const bool hasAbsolutePath =
+            !texturePath.empty() &&
+            (texturePath.front() == '/' || texturePath.find(':') != std::string::npos);
+        const std::string resolvedPath =
+            hasAbsolutePath ? texturePath : Common::ResolveAssetPath(texturePath);
+
+        auto sprite = std::make_shared<Util::Image>(resolvedPath);
+        sprite->SetUVRect(uvRect);
+        platform->SetDrawable(sprite);
+
+        auto spriteSize = sprite->GetSize();
+        platform->m_Transform.scale = {
+            size.x / spriteSize.x,
+            size.y / spriteSize.y,
+        };
+    }
+
     platform->m_Transform.translation = position;
     platform->SetZIndex(zIndex);
-
-    auto spriteSize = sprite->GetSize();
-    platform->m_Transform.scale = {
-        size.x / spriteSize.x,
-        size.y / spriteSize.y,
-    };
+    platform->SetVisible(visible);
 
     return platform;
 }
@@ -93,20 +109,32 @@ void App::LoadLevel(const std::size_t levelIndex) {
     m_Root = Util::Renderer();
     m_Platforms.clear();
     m_DeathZones.clear();
+    m_LevelRenderTiles.clear();
+
+    for (const auto &cfg : level.renderTiles) {
+        m_LevelRenderTiles.push_back(
+            CreatePlatform(cfg.position, cfg.size, cfg.zIndex, cfg.texturePath,
+                           cfg.uvRect, cfg.visible));
+    }
 
     for (const auto &cfg : level.platforms) {
         m_Platforms.push_back(
-            CreatePlatform(cfg.position, cfg.size, cfg.zIndex, cfg.texturePath));
+            CreatePlatform(cfg.position, cfg.size, cfg.zIndex, cfg.texturePath,
+                           cfg.uvRect, cfg.visible));
     }
 
     for (const auto &cfg : level.deathZones) {
         m_DeathZones.push_back(
-            CreatePlatform(cfg.position, cfg.size, cfg.zIndex, cfg.texturePath));
+            CreatePlatform(cfg.position, cfg.size, cfg.zIndex, cfg.texturePath,
+                           cfg.uvRect, cfg.visible));
     }
 
     m_GoalFlag = CreatePlatform(level.goalPosition, level.goalSize, 4.0F,
                                 level.goalTexturePath);
 
+    for (const auto &tile : m_LevelRenderTiles) {
+        m_Root.AddChild(tile);
+    }
     for (const auto &platform : m_Platforms) {
         m_Root.AddChild(platform);
     }
