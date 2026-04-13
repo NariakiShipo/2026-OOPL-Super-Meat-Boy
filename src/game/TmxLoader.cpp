@@ -1,6 +1,7 @@
 #include "game/TmxLoader.hpp"
 
 #include <filesystem>
+#include <limits>
 
 #include <tmxlite/Map.hpp>
 #include <tmxlite/ImageLayer.hpp>
@@ -19,8 +20,9 @@ constexpr std::uint32_t kShooterLocalGidMin = 13;
 constexpr std::uint32_t kShooterLocalGidMax = 16;
 
 constexpr float kBackgroundZ = -20.0F;
-constexpr float kStationaryZ = -5.0F;
-constexpr float kForegroundZ = 8.0F;
+constexpr float kRenderLayerZStep = 5.0F;
+constexpr std::size_t kSawAnimationIntervalMs = 80;
+constexpr std::size_t kBreakableAnimationIntervalMs = 70;
 
 glm::vec2 TmxPixelCenterToWorld(const float centerX, const float centerY,
                                 const float mapPixelWidth,
@@ -139,14 +141,8 @@ glm::vec4 MakeUvRect(const tmx::Tileset &tileset, const std::uint32_t gid,
     return {uMin, vMin, uMax, vMax};
 }
 
-float LayerToZIndex(const std::string &name) {
-    if (name == "background") {
-        return kBackgroundZ;
-    }
-    if (name == "foreground") {
-        return kForegroundZ;
-    }
-    return kStationaryZ;
+float RenderLayerOrderToZIndex(const std::size_t renderLayerOrder) {
+    return kBackgroundZ + static_cast<float>(renderLayerOrder) * kRenderLayerZStep;
 }
 
 Game::LevelObjectConfig MakeInvisibleCollider(const glm::vec2 &position,
@@ -181,6 +177,9 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
         static_cast<float>(mapTileCount.x * mapTileSize.x);
     const float mapPixelHeight =
         static_cast<float>(mapTileCount.y * mapTileSize.y);
+    level.mapPixelSize = {mapPixelWidth, mapPixelHeight};
+    level.worldBoundsMin = {-mapPixelWidth * 0.5F, -mapPixelHeight * 0.5F};
+    level.worldBoundsMax = {mapPixelWidth * 0.5F, mapPixelHeight * 0.5F};
 
     const auto &tilesets = map.getTilesets();
     const std::uint32_t myImagesFirstGid = FindMyImagesFirstGid(tilesets);
@@ -195,14 +194,24 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
 
     bool spawnFound = false;
     bool goalFound = false;
+    bool hasCustomBounds = false;
+    float customBoundsMinX = std::numeric_limits<float>::max();
+    float customBoundsMaxX = std::numeric_limits<float>::lowest();
+    float customBoundsMinY = std::numeric_limits<float>::max();
+    float customBoundsMaxY = std::numeric_limits<float>::lowest();
+    std::size_t renderLayerOrder = 0;
 
     for (const auto &layerPtr : map.getLayers()) {
         if (layerPtr->getType() == tmx::Layer::Type::Tile) {
             const auto &layer = layerPtr->getLayerAs<tmx::TileLayer>();
             const bool isStationaryLayer = layer.getName() == "stationary";
+            const bool isBreakableLayer = layer.getName() == "breakable";
             if (!layer.getVisible()) {
                 continue;
             }
+
+            const float layerZ = RenderLayerOrderToZIndex(renderLayerOrder);
+            ++renderLayerOrder;
 
             const auto layerOffset = layer.getOffset();
 
@@ -211,7 +220,6 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
                 continue;
             }
 
-            const float layerZ = LayerToZIndex(layer.getName());
             for (std::size_t i = 0; i < tiles.size(); ++i) {
                 const auto &tile = tiles[i];
                 if (tile.ID == 0) {
@@ -229,6 +237,34 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
                                       static_cast<float>(layerOffset.y);
                 const glm::vec2 worldCenter =
                     TmxPixelCenterToWorld(centerX, centerY, mapPixelWidth, mapPixelHeight);
+
+                if (isBreakableLayer) {
+                    Game::LevelObjectConfig breakable{};
+                    breakable.position = worldCenter;
+                    breakable.size = {
+                        static_cast<float>(mapTileSize.x),
+                        static_cast<float>(mapTileSize.y),
+                    };
+                    breakable.zIndex = layerZ;
+                    breakable.texturePath = "images/disappearing_1.png";
+                    breakable.animationFrames = {
+                        "images/disappearing_1.png",
+                        "images/disappearing_2.png",
+                        "images/disappearing_3.png",
+                        "images/disappearing_4.png",
+                        "images/disappearing_5.png",
+                        "images/disappearing_6.png",
+                        "images/disappearing_7.png",
+                        "images/disappearing_8.png",
+                        "images/disappearing_9.png",
+                        "images/disappearing_10.png",
+                        "images/disappearing_11.png",
+                    };
+                    breakable.animationIntervalMs = kBreakableAnimationIntervalMs;
+                    breakable.visible = true;
+                    level.breakableBlocks.push_back(std::move(breakable));
+                    continue;
+                }
 
                 const auto localGid = decodeMyImagesLocal(tile.ID);
 
@@ -299,6 +335,9 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
                 continue;
             }
 
+            const float layerZ = RenderLayerOrderToZIndex(renderLayerOrder);
+            ++renderLayerOrder;
+
             const auto &imageLayer = layerPtr->getLayerAs<tmx::ImageLayer>();
             const auto imageSize = imageLayer.getImageSize();
             if (imageLayer.getImagePath().empty() || imageSize.x == 0 || imageSize.y == 0) {
@@ -318,7 +357,7 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
                 static_cast<float>(imageSize.x),
                 static_cast<float>(imageSize.y),
             };
-            visual.zIndex = LayerToZIndex(layerPtr->getName());
+            visual.zIndex = layerZ;
             visual.texturePath = MakeResourceRelativeImagePath(
                 std::filesystem::path(resolvedMapPath), imageLayer.getImagePath());
             visual.visible = true;
@@ -333,6 +372,7 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
         const auto &objectGroup = layerPtr->getLayerAs<tmx::ObjectGroup>();
         const bool isPlatformGroup = objectGroup.getName() == "rectangle";
         const bool isSawGroup = objectGroup.getName() == "saws";
+        const bool isBoundsGroup = objectGroup.getName() == "bounds";
         const auto layerOffset = layerPtr->getOffset();
 
         for (const auto &obj : objectGroup.getObjects()) {
@@ -345,13 +385,32 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
                 TmxPixelCenterToWorld(centerX, centerY, mapPixelWidth, mapPixelHeight);
             const glm::vec2 size = {aabb.width, aabb.height};
 
+            if (isBoundsGroup && size.x > 0.0F && size.y > 0.0F) {
+                const glm::vec2 half = size * 0.5F;
+                customBoundsMinX = std::min(customBoundsMinX, worldCenter.x - half.x);
+                customBoundsMaxX = std::max(customBoundsMaxX, worldCenter.x + half.x);
+                customBoundsMinY = std::min(customBoundsMinY, worldCenter.y - half.y);
+                customBoundsMaxY = std::max(customBoundsMaxY, worldCenter.y + half.y);
+                hasCustomBounds = true;
+                continue;
+            }
+
             if (isPlatformGroup) {
                 level.platforms.push_back(MakeInvisibleCollider(worldCenter, size, 1.0F));
                 continue;
             }
 
             if (isSawGroup || obj.getShape() == tmx::Object::Shape::Ellipse) {
-                level.deathZones.push_back(MakeInvisibleCollider(worldCenter, size, 3.0F));
+                auto saw = MakeInvisibleCollider(worldCenter, size, 3.0F);
+                saw.texturePath = "images/buzzsaw2_1.png";
+                saw.visible = true;
+                saw.animationFrames = {
+                    "images/buzzsaw2_1.png",
+                    "images/buzzsaw2_2.png",
+                    "images/buzzsaw2_3.png",
+                };
+                saw.animationIntervalMs = kSawAnimationIntervalMs;
+                level.deathZones.push_back(std::move(saw));
                 continue;
             }
 
@@ -369,6 +428,12 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
         }
     }
 
+    if (hasCustomBounds && customBoundsMinX <= customBoundsMaxX &&
+        customBoundsMinY <= customBoundsMaxY) {
+        level.worldBoundsMin = {customBoundsMinX, customBoundsMinY};
+        level.worldBoundsMax = {customBoundsMaxX, customBoundsMaxY};
+    }
+
     if (!spawnFound) {
         level.spawn = TmxPixelCenterToWorld(80.0F, mapPixelHeight - 80.0F,
                                             mapPixelWidth, mapPixelHeight);
@@ -382,6 +447,24 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
         LOG_WARN("TMX goal marker not found in {}, using fallback goal.",
                  resolvedMapPath);
     }
+
+    const float boundaryWallThickness = 50.0F;
+    const float boundaryWallHeight = (level.worldBoundsMax.y - level.worldBoundsMin.y) + 200.0F;
+    const float boundaryWallCenterY = (level.worldBoundsMin.y + level.worldBoundsMax.y) * 0.5F;
+
+    LevelObjectConfig leftWall{};
+    leftWall.position = {level.worldBoundsMin.x - boundaryWallThickness * 0.5F, boundaryWallCenterY};
+    leftWall.size = {boundaryWallThickness, boundaryWallHeight};
+    leftWall.zIndex = 1.0F;
+    leftWall.visible = false;
+    level.platforms.push_back(leftWall);
+
+    LevelObjectConfig rightWall{};
+    rightWall.position = {level.worldBoundsMax.x + boundaryWallThickness * 0.5F, boundaryWallCenterY};
+    rightWall.size = {boundaryWallThickness, boundaryWallHeight};
+    rightWall.zIndex = 1.0F;
+    rightWall.visible = false;
+    level.platforms.push_back(rightWall);
 
     return level;
 }

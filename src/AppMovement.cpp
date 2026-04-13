@@ -19,7 +19,6 @@ void App::StepPlayer(const float dtMs) {
     constexpr float wallReattachCooldownMs = 110.0F;
     constexpr float wallSlideMaxFallSpeed = 260.0F;
     constexpr float gravity = -1800.0F;
-    constexpr float killY = -520.0F;
 
     if (m_WallReattachCooldownMs > 0.0F) {
         m_WallReattachCooldownMs = std::max(0.0F, m_WallReattachCooldownMs - dtMs);
@@ -108,6 +107,39 @@ void App::StepPlayer(const float dtMs) {
         }
     }
 
+    m_BreakableDebugLogCooldownMs =
+        std::max(0.0F, m_BreakableDebugLogCooldownMs - dtMs);
+    if (m_BreakableDebugLogCooldownMs <= 0.0F && !m_BreakableBlocks.empty()) {
+        std::size_t nearestIndex = 0;
+        float nearestDistSq = std::numeric_limits<float>::max();
+        bool foundValidBreakable = false;
+
+        for (std::size_t i = 0; i < m_BreakableBlocks.size(); ++i) {
+            const auto &breakable = m_BreakableBlocks[i];
+            if (breakable.object == nullptr) {
+                continue;
+            }
+
+            const auto blockPos = breakable.object->m_Transform.translation;
+            const float dx = playerCenter.x - blockPos.x;
+            const float dy = playerCenter.y - blockPos.y;
+            const float distSq = (dx * dx) + (dy * dy);
+            if (distSq < nearestDistSq) {
+                nearestDistSq = distSq;
+                nearestIndex = i;
+                foundValidBreakable = true;
+            }
+        }
+
+        if (foundValidBreakable) {
+            //const auto &nearest = m_BreakableBlocks[nearestIndex];
+            //const auto blockPos = nearest.object->m_Transform.translation;
+            //const bool overlapNow = Game::IsOverlap(playerAabb, Game::GetAabb(nearest.object));
+        }
+
+        m_BreakableDebugLogCooldownMs = 1000.0F;
+    }
+
     if (m_GoalFlag != nullptr &&
         Game::IsOverlap(playerAabb, Game::GetAabb(m_GoalFlag))) {
         if (!m_LevelCleared) {
@@ -122,7 +154,17 @@ void App::StepPlayer(const float dtMs) {
         }
     }
 
-    if (m_Player->m_Transform.translation.y < killY ||
+    const float outOfBoundsMinX = m_WorldBoundsMin.x - m_PlayerColliderSize.x;
+    const float outOfBoundsMaxX = m_WorldBoundsMax.x + m_PlayerColliderSize.x;
+    const float outOfBoundsMinY = m_WorldBoundsMin.y - m_PlayerColliderSize.y;
+    const float outOfBoundsMaxY = m_WorldBoundsMax.y + m_PlayerColliderSize.y;
+    const auto playerPosition = m_Player->m_Transform.translation;
+    const bool isOutOfBounds = playerPosition.x < outOfBoundsMinX ||
+                               playerPosition.x > outOfBoundsMaxX ||
+                               playerPosition.y < outOfBoundsMinY ||
+                               playerPosition.y > outOfBoundsMaxY;
+
+    if (isOutOfBounds ||
         Util::Input::IsKeyDown(Util::Keycode::R)) {
         RespawnPlayer();
     }

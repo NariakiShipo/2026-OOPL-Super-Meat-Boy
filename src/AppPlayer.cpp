@@ -76,3 +76,22 @@ void App::RespawnPlayer() {
     ++m_RespawnCount;
     LOG_INFO("Respawn count: {}", m_RespawnCount);
 }
+
+void App::UpdateBreakableBlocks() {
+    for (std::size_t i = 0; i < m_BreakableBlocks.size(); ++i) {
+        auto &breakable = m_BreakableBlocks[i];
+        if (breakable.broken || !breakable.breaking || breakable.animation == nullptr ||
+            breakable.object == nullptr) {
+            continue;
+        }
+
+        if (breakable.animation->GetState() == Util::Animation::State::ENDED) {
+            const auto blockPos = breakable.object->m_Transform.translation;
+            breakable.object->SetVisible(false);
+            breakable.breaking = false;
+            breakable.broken = true;
+            LOG_INFO("Breakable[{}] animation ended. Block removed at ({}, {})",
+                     i, blockPos.x, blockPos.y);
+        }
+    }
+}

@@ -14,6 +14,7 @@ void App::Update() {
     }
 
     m_Root.Update();
+    UpdateBreakableBlocks();
     
     /*
      * Do not touch the code below as they serve the purpose for

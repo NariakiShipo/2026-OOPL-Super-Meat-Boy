@@ -11,15 +11,9 @@
 #include "Util/Logger.hpp"
 #include "Util/Text.hpp"
 #include "Util/TransformUtils.hpp"
+#include "Util/Animation.hpp"
 
 namespace {
-void ExpandAabb(Game::Aabb &target, const Game::Aabb &incoming) {
-    target.minX = std::min(target.minX, incoming.minX);
-    target.maxX = std::max(target.maxX, incoming.maxX);
-    target.minY = std::min(target.minY, incoming.minY);
-    target.maxY = std::max(target.maxY, incoming.maxY);
-}
-
 float ClampToRangeOrCenter(const float value, const float minValue,
                            const float maxValue) {
     if (minValue > maxValue) {
@@ -108,6 +102,7 @@ void App::LoadLevel(const std::size_t levelIndex) {
 
     m_Root = Util::Renderer();
     m_Platforms.clear();
+    m_BreakableBlocks.clear();
     m_DeathZones.clear();
     m_LevelRenderTiles.clear();
 
@@ -123,10 +118,89 @@ void App::LoadLevel(const std::size_t levelIndex) {
                            cfg.uvRect, cfg.visible));
     }
 
+    for (const auto &cfg : level.breakableBlocks) {
+        auto block = std::make_shared<Util::GameObject>();
+
+        std::vector<std::string> resolvedPaths;
+        resolvedPaths.reserve(cfg.animationFrames.size());
+        for (const auto &framePath : cfg.animationFrames) {
+            const bool hasAbsolutePath =
+                !framePath.empty() &&
+                (framePath.front() == '/' || framePath.find(':') != std::string::npos);
+            resolvedPaths.push_back(
+                hasAbsolutePath ? framePath : Common::ResolveAssetPath(framePath));
+        }
+
+        const std::size_t intervalMs = std::max<std::size_t>(cfg.animationIntervalMs, 1);
+        auto animation = std::make_shared<Util::Animation>(resolvedPaths, false,
+                                                            intervalMs, false, 0);
+        block->SetDrawable(animation);
+
+        const auto frameSize = animation->GetSize();
+        block->m_Transform.scale = {
+            cfg.size.x / frameSize.x,
+            cfg.size.y / frameSize.y,
+        };
+        block->m_Transform.translation = cfg.position;
+        block->SetZIndex(cfg.zIndex);
+        block->SetVisible(cfg.visible);
+
+        m_BreakableBlocks.push_back({block, animation, cfg.size, false, false});
+    }
+
+    if (m_BreakableBlocks.empty()) {
+        LOG_WARN("No breakable blocks loaded for level '{}'", level.mapPath);
+    } else {
+        LOG_INFO("Loaded {} breakable block(s) for level '{}'",
+                 m_BreakableBlocks.size(), level.mapPath);
+        for (std::size_t i = 0; i < m_BreakableBlocks.size(); ++i) {
+            const auto &obj = m_BreakableBlocks[i].object;
+            if (obj == nullptr) {
+                continue;
+            }
+            const auto size = obj->GetScaledSize();
+            const auto pos = obj->m_Transform.translation;
+            LOG_DEBUG("Breakable[{}] pos=({}, {}), size=({}, {})",
+                      i, pos.x, pos.y, size.x, size.y);
+        }
+    }
+
     for (const auto &cfg : level.deathZones) {
-        m_DeathZones.push_back(
-            CreatePlatform(cfg.position, cfg.size, cfg.zIndex, cfg.texturePath,
-                           cfg.uvRect, cfg.visible));
+        if (!cfg.animationFrames.empty()) {
+            auto hazard = std::make_shared<Util::GameObject>();
+
+            std::vector<std::string> resolvedPaths;
+            resolvedPaths.reserve(cfg.animationFrames.size());
+            for (const auto &framePath : cfg.animationFrames) {
+                const bool hasAbsolutePath =
+                    !framePath.empty() &&
+                    (framePath.front() == '/' ||
+                     framePath.find(':') != std::string::npos);
+                resolvedPaths.push_back(
+                    hasAbsolutePath ? framePath : Common::ResolveAssetPath(framePath));
+            }
+
+            const std::size_t intervalMs = std::max<std::size_t>(cfg.animationIntervalMs, 1);
+            auto animatedSaw =
+                std::make_shared<Util::Animation>(resolvedPaths, true, intervalMs, true, 0);
+            hazard->SetDrawable(animatedSaw);
+
+            const auto frameSize = animatedSaw->GetSize();
+            hazard->m_Transform.scale = {
+                cfg.size.x / frameSize.x,
+                cfg.size.y / frameSize.y,
+            };
+            hazard->m_Transform.translation = cfg.position;
+            hazard->SetZIndex(cfg.zIndex);
+            hazard->SetVisible(cfg.visible);
+
+            m_DeathZones.push_back(hazard);
+            continue;
+        }
+
+        m_DeathZones.push_back(CreatePlatform(cfg.position, cfg.size, cfg.zIndex,
+                                              cfg.texturePath, cfg.uvRect,
+                                              cfg.visible));
     }
 
     m_GoalFlag = CreatePlatform(level.goalPosition, level.goalSize, 4.0F,
@@ -138,6 +212,9 @@ void App::LoadLevel(const std::size_t levelIndex) {
     for (const auto &platform : m_Platforms) {
         m_Root.AddChild(platform);
     }
+    for (const auto &breakable : m_BreakableBlocks) {
+        m_Root.AddChild(breakable.object);
+    }
     for (const auto &deathZone : m_DeathZones) {
         m_Root.AddChild(deathZone);
     }
@@ -146,25 +223,38 @@ void App::LoadLevel(const std::size_t levelIndex) {
     m_Root.AddChild(m_StatusBoard);
 
     m_PlayerSpawn = level.spawn;
+    m_WorldBoundsMin = level.worldBoundsMin;
+    m_WorldBoundsMax = level.worldBoundsMax;
     m_CameraLookaheadOffset = {0.0F, 0.0F};
 
-    auto worldBounds = Game::MakeAabb(m_PlayerSpawn, m_PlayerColliderSize);
-    for (const auto &platform : m_Platforms) {
-        ExpandAabb(worldBounds, Game::GetAabb(platform));
+    const float zoomX = (level.mapPixelSize.x > 0.0F)
+                            ? static_cast<float>(WINDOW_WIDTH) / level.mapPixelSize.x
+                            : 1.0F;
+    const float zoomY = (level.mapPixelSize.y > 0.0F)
+                            ? static_cast<float>(WINDOW_HEIGHT) / level.mapPixelSize.y
+                            : 1.0F;
+    m_CameraZoom = std::min(zoomX, zoomY);
+    if (!std::isfinite(m_CameraZoom) || m_CameraZoom <= 0.0F) {
+        m_CameraZoom = 1.0F;
     }
-    if (m_GoalFlag != nullptr) {
-        ExpandAabb(worldBounds, Game::GetAabb(m_GoalFlag));
-    }
+    Util::SetCameraZoom(m_CameraZoom);
 
-    const glm::vec2 halfWindow = {
-        static_cast<float>(WINDOW_WIDTH) * 0.5F,
-        static_cast<float>(WINDOW_HEIGHT) * 0.5F,
+    Game::Aabb worldBounds = {
+        m_WorldBoundsMin.x,
+        m_WorldBoundsMax.x,
+        m_WorldBoundsMin.y,
+        m_WorldBoundsMax.y,
     };
 
-    const float minCameraX = worldBounds.minX + halfWindow.x;
-    const float maxCameraX = worldBounds.maxX - halfWindow.x;
-    const float minCameraY = worldBounds.minY + halfWindow.y;
-    const float maxCameraY = worldBounds.maxY - halfWindow.y;
+    const glm::vec2 cameraHalfWindow = {
+        static_cast<float>(WINDOW_WIDTH) * 0.5F / m_CameraZoom,
+        static_cast<float>(WINDOW_HEIGHT) * 0.5F / m_CameraZoom,
+    };
+
+    const float minCameraX = worldBounds.minX + cameraHalfWindow.x;
+    const float maxCameraX = worldBounds.maxX - cameraHalfWindow.x;
+    const float minCameraY = worldBounds.minY + cameraHalfWindow.y;
+    const float maxCameraY = worldBounds.maxY - cameraHalfWindow.y;
 
     if (minCameraX <= maxCameraX) {
         m_CameraBoundsMin.x = minCameraX;
@@ -184,10 +274,10 @@ void App::LoadLevel(const std::size_t levelIndex) {
         m_CameraBoundsMax.y = centerY;
     }
 
-    m_CameraPosition.x = ClampToRangeOrCenter(
-        m_PlayerSpawn.x, m_CameraBoundsMin.x, m_CameraBoundsMax.x);
-    m_CameraPosition.y = ClampToRangeOrCenter(
-        m_PlayerSpawn.y, m_CameraBoundsMin.y, m_CameraBoundsMax.y);
+    m_CameraPosition.x = ClampToRangeOrCenter(m_PlayerSpawn.x, m_CameraBoundsMin.x,
+                                              m_CameraBoundsMax.x);
+    m_CameraPosition.y = ClampToRangeOrCenter(m_PlayerSpawn.y, m_CameraBoundsMin.y,
+                                              m_CameraBoundsMax.y);
     Util::SetCameraPosition(m_CameraPosition);
 
     m_LevelCleared = false;

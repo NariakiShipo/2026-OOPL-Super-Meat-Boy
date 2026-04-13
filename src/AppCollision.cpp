@@ -2,9 +2,12 @@
 
 #include "game/Collision.hpp"
 
+#include "Util/Logger.hpp"
+
 void App::ResolvePlayerPlatformCollisions(const glm::vec2 &previousPosition) {
     constexpr float wallBounceMinSpeed = 100.0F;
     constexpr float wallBounceDamping = 0.22F;
+    constexpr float kBreakableTopContactEpsilon = 0.5F;
 
     const auto makePlayerAabb = [this]() {
         return Game::MakeAabb(m_Player->m_Transform.translation,
@@ -14,14 +17,22 @@ void App::ResolvePlayerPlatformCollisions(const glm::vec2 &previousPosition) {
     auto playerAabb = makePlayerAabb();
     const auto playerHalf = m_PlayerColliderSize * 0.5F;
 
-    for (const auto &platform : m_Platforms) {
-        const auto platformAabb = Game::GetAabb(platform);
+    const auto resolveAgainst = [&](const std::shared_ptr<Util::GameObject> &platform,
+                                    bool *touchedTop = nullptr,
+                                    const glm::vec2 *colliderSizeOverride = nullptr,
+                                    const bool useRelaxedTopCheck = false) {
+        const auto platformAabb = (colliderSizeOverride != nullptr)
+                                      ? Game::MakeAabb(platform->m_Transform.translation,
+                                                       *colliderSizeOverride)
+                                      : Game::GetAabb(platform);
         const auto platformPosition = platform->m_Transform.translation;
-        const auto platformHalf = platform->GetScaledSize() * 0.5F;
+        const auto platformHalf = (colliderSizeOverride != nullptr)
+                                      ? (*colliderSizeOverride) * 0.5F
+                                      : platform->GetScaledSize() * 0.5F;
         const auto currentPosition = m_Player->m_Transform.translation;
 
         if (!Game::IsOverlap(playerAabb, platformAabb)) {
-            continue;
+            return;
         }
 
         const float platformTop = platformPosition.y + platformHalf.y;
@@ -29,12 +40,21 @@ void App::ResolvePlayerPlatformCollisions(const glm::vec2 &previousPosition) {
 
         const float previousBottom = previousPosition.y - playerHalf.y;
         const float currentBottom = currentPosition.y - playerHalf.y;
-        if (previousBottom >= platformTop && currentBottom < platformTop) {
+        const bool touchedFromTop =
+            useRelaxedTopCheck
+                ? (previousBottom >= (platformTop - kBreakableTopContactEpsilon) &&
+                   currentBottom <= (platformTop + kBreakableTopContactEpsilon))
+                : (previousBottom >= platformTop && currentBottom < platformTop);
+
+        if (touchedFromTop) {
             m_Player->m_Transform.translation.y = platformTop + playerHalf.y;
             m_PlayerVelocity.y = 0.0F;
             m_PlayerOnGround = true;
+            if (touchedTop != nullptr) {
+                *touchedTop = true;
+            }
             playerAabb = makePlayerAabb();
-            continue;
+            return;
         }
 
         const float previousTop = previousPosition.y + playerHalf.y;
@@ -45,14 +65,14 @@ void App::ResolvePlayerPlatformCollisions(const glm::vec2 &previousPosition) {
                 m_PlayerVelocity.y = 0.0F;
             }
             playerAabb = makePlayerAabb();
-            continue;
+            return;
         }
 
         const float overlapX =
             std::min(playerAabb.maxX, platformAabb.maxX) -
             std::max(playerAabb.minX, platformAabb.minX);
         if (overlapX <= 0.0F) {
-            continue;
+            return;
         }
 
         float sideDirection = 0.0F;
@@ -76,5 +96,34 @@ void App::ResolvePlayerPlatformCollisions(const glm::vec2 &previousPosition) {
             m_WallJumpDirection = sideDirection;
         }
         playerAabb = makePlayerAabb();
+    };
+
+    for (const auto &platform : m_Platforms) {
+        resolveAgainst(platform);
+    }
+
+    for (std::size_t i = 0; i < m_BreakableBlocks.size(); ++i) {
+        auto &breakable = m_BreakableBlocks[i];
+        if (breakable.broken || breakable.object == nullptr) {
+            continue;
+        }
+
+        bool touchedTop = false;
+        resolveAgainst(breakable.object, &touchedTop, &breakable.colliderSize, true);
+        if (touchedTop && !breakable.breaking) {
+            breakable.breaking = true;
+            if (breakable.animation != nullptr) {
+                breakable.animation->Play();
+            }
+
+            const auto blockPos = breakable.object->m_Transform.translation;
+            LOG_INFO(
+                "Breakable[{}] triggered from top contact. player=({}, {}), block=({}, {})",
+                i,
+                m_Player->m_Transform.translation.x,
+                m_Player->m_Transform.translation.y,
+                blockPos.x,
+                blockPos.y);
+        }
     }
 }
