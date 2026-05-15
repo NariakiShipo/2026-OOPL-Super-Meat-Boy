@@ -9,15 +9,22 @@ void App::ApplyPlayerDrawable(const std::shared_ptr<Core::Drawable> &drawable) {
 }
 
 void App::UpdatePlayerAnimation(const float moveAxis) {
-    if (moveAxis > 0.0F) {
+    PlayerAnimState nextState = PlayerAnimState::IDLE;
+    const float airborneThreshold = m_Config.player.animation.airborneThreshold;
+    const float runThreshold = m_Config.player.animation.runThreshold;
+
+    // Prioritize actual movement direction, but also consider input direction
+    // to handle direction changes that haven't updated velocity yet
+    if (std::abs(m_PlayerVelocity.x) > runThreshold) {
+        // Moving at non-trivial speed: trust velocity
+        m_PlayerFacingRight = (m_PlayerVelocity.x > 0.0F);
+    } else if (moveAxis > 0.0F) {
+        // Not moving much: use input
         m_PlayerFacingRight = true;
     } else if (moveAxis < 0.0F) {
         m_PlayerFacingRight = false;
     }
-
-    PlayerAnimState nextState = PlayerAnimState::IDLE;
-    constexpr float airborneThreshold = 20.0F;
-    constexpr float runThreshold = 1.0F;
+    // If moveAxis == 0, keep current facing
 
     if (!m_PlayerOnGround) {
         if (m_PlayerVelocity.y > airborneThreshold) {

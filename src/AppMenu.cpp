@@ -13,11 +13,6 @@
 #include "game/Collision.hpp"
 
 namespace {
-constexpr int kMaxVolume = 128;
-constexpr int kSliderBarWidth = 20;
-constexpr Util::Color kDefaultButtonColor(255, 255, 255, 255);
-constexpr Util::Color kHoverButtonColor(255, 244, 200, 255);
-
 std::shared_ptr<Util::Text> GetTextDrawable(
     const std::shared_ptr<Util::GameObject> &object) {
     if (object == nullptr) {
@@ -45,18 +40,20 @@ void SetButtonColor(const std::shared_ptr<Util::GameObject> &button,
     }
 }
 
-std::string BuildVolumeBar(const std::string &label, const int volume) {
-    const int clampedVolume = std::clamp(volume, 0, kMaxVolume);
+std::string BuildVolumeBar(const std::string &label, const int volume,
+                           const int maxVolume, const int sliderBarWidth) {
+    const int clampedVolume = std::clamp(volume, 0, maxVolume);
     const int filledCount =
-        std::clamp((clampedVolume * kSliderBarWidth + kMaxVolume / 2) /
-                       kMaxVolume,
-                   0, kSliderBarWidth);
+        std::clamp((clampedVolume * sliderBarWidth + maxVolume / 2) /
+                       maxVolume,
+                   0, sliderBarWidth);
     return label + " [" + std::string(filledCount, '#') +
-           std::string(kSliderBarWidth - filledCount, '-') + "] " +
+           std::string(sliderBarWidth - filledCount, '-') + "] " +
            std::to_string(clampedVolume);
 }
 
-int VolumeFromCursor(const Game::Aabb &bounds, const float cursorX) {
+int VolumeFromCursor(const Game::Aabb &bounds, const float cursorX,
+                      const int maxVolume) {
     if (bounds.maxX <= bounds.minX) {
         return 0;
     }
@@ -64,7 +61,7 @@ int VolumeFromCursor(const Game::Aabb &bounds, const float cursorX) {
     const float ratio = std::clamp((cursorX - bounds.minX) /
                                        (bounds.maxX - bounds.minX),
                                    0.0F, 1.0F);
-    return static_cast<int>(std::round(ratio * static_cast<float>(kMaxVolume)));
+    return static_cast<int>(std::round(ratio * static_cast<float>(maxVolume)));
 }
 
 void SetVisibleObjects(
@@ -89,8 +86,10 @@ void App::LoadAudioSettings() {
     int bgmVolume = m_AudioSettings.bgmVolume;
     int sfxVolume = m_AudioSettings.sfxVolume;
     if (input >> bgmVolume >> sfxVolume) {
-        m_AudioSettings.bgmVolume = std::clamp(bgmVolume, 0, kMaxVolume);
-        m_AudioSettings.sfxVolume = std::clamp(sfxVolume, 0, kMaxVolume);
+        m_AudioSettings.bgmVolume =
+            std::clamp(bgmVolume, 0, m_Config.audio.maxVolume);
+        m_AudioSettings.sfxVolume =
+            std::clamp(sfxVolume, 0, m_Config.audio.maxVolume);
     }
 }
 
@@ -105,8 +104,10 @@ void App::SaveAudioSettings() const {
 }
 
 void App::ApplyAudioSettings() {
-    m_AudioSettings.bgmVolume = std::clamp(m_AudioSettings.bgmVolume, 0, kMaxVolume);
-    m_AudioSettings.sfxVolume = std::clamp(m_AudioSettings.sfxVolume, 0, kMaxVolume);
+    m_AudioSettings.bgmVolume =
+        std::clamp(m_AudioSettings.bgmVolume, 0, m_Config.audio.maxVolume);
+    m_AudioSettings.sfxVolume =
+        std::clamp(m_AudioSettings.sfxVolume, 0, m_Config.audio.maxVolume);
 
     if (m_TitleBGM != nullptr) {
         m_TitleBGM->SetVolume(m_AudioSettings.bgmVolume);
@@ -119,12 +120,20 @@ void App::ApplyAudioSettings() {
 void App::RefreshSettingsText() {
     const auto bgmText = GetTextDrawable(m_BgmSettingText);
     if (bgmText != nullptr) {
-        bgmText->SetText(BuildVolumeBar("bgm", m_AudioSettings.bgmVolume));
+        bgmText->SetText(BuildVolumeBar(
+            m_Config.ui.bgmLabel.text,
+            m_AudioSettings.bgmVolume,
+            m_Config.audio.maxVolume,
+            m_Config.audio.sliderBarWidth));
     }
 
     const auto sfxText = GetTextDrawable(m_SfxSettingText);
     if (sfxText != nullptr) {
-        sfxText->SetText(BuildVolumeBar("sfx", m_AudioSettings.sfxVolume));
+        sfxText->SetText(BuildVolumeBar(
+            m_Config.ui.sfxLabel.text,
+            m_AudioSettings.sfxVolume,
+            m_Config.audio.maxVolume,
+            m_Config.audio.sliderBarWidth));
     }
 }
 
@@ -232,16 +241,18 @@ void App::UpdateTitleScreen() {
     const bool settingsHovered = IsCursorOver(m_SettingsButton);
 
     SetButtonColor(m_StartButton,
-                   startHovered ? kHoverButtonColor : kDefaultButtonColor);
+                   startHovered ? m_Config.ui.buttonHoverColor
+                                : m_Config.ui.buttonDefaultColor);
     SetButtonColor(m_SettingsButton,
-                   settingsHovered ? kHoverButtonColor : kDefaultButtonColor);
+                   settingsHovered ? m_Config.ui.buttonHoverColor
+                                    : m_Config.ui.buttonDefaultColor);
 
-    if (startHovered && Util::Input::IsKeyPressed(Util::Keycode::MOUSE_LB)) {
+    if (startHovered && Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB)) {
         StartGame();
         return;
     }
 
-    if (settingsHovered && Util::Input::IsKeyPressed(Util::Keycode::MOUSE_LB)) {
+    if (settingsHovered && Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB)) {
         OpenSettingsMenu();
         return;
     }
@@ -266,7 +277,8 @@ void App::UpdateSettingsMenu() {
         if (Util::Input::IsKeyPressed(Util::Keycode::MOUSE_LB) &&
             cursor.x >= bgmBounds.minX && cursor.x <= bgmBounds.maxX &&
             cursor.y >= bgmBounds.minY && cursor.y <= bgmBounds.maxY) {
-            const int newVolume = VolumeFromCursor(bgmBounds, cursor.x);
+            const int newVolume =
+                VolumeFromCursor(bgmBounds, cursor.x, m_Config.audio.maxVolume);
             if (newVolume != m_AudioSettings.bgmVolume) {
                 m_AudioSettings.bgmVolume = newVolume;
                 ApplyAudioSettings();
@@ -282,7 +294,8 @@ void App::UpdateSettingsMenu() {
         if (Util::Input::IsKeyPressed(Util::Keycode::MOUSE_LB) &&
             cursor.x >= sfxBounds.minX && cursor.x <= sfxBounds.maxX &&
             cursor.y >= sfxBounds.minY && cursor.y <= sfxBounds.maxY) {
-            const int newVolume = VolumeFromCursor(sfxBounds, cursor.x);
+            const int newVolume =
+                VolumeFromCursor(sfxBounds, cursor.x, m_Config.audio.maxVolume);
             if (newVolume != m_AudioSettings.sfxVolume) {
                 m_AudioSettings.sfxVolume = newVolume;
                 ApplyAudioSettings();
@@ -293,11 +306,11 @@ void App::UpdateSettingsMenu() {
     }
 
     SetButtonColor(m_SettingsBackButton,
-                   IsCursorOver(m_SettingsBackButton) ? kHoverButtonColor
-                                                      : kDefaultButtonColor);
+                   IsCursorOver(m_SettingsBackButton) ? m_Config.ui.buttonHoverColor
+                                                      : m_Config.ui.buttonDefaultColor);
 
     if (IsCursorOver(m_SettingsBackButton) &&
-        Util::Input::IsKeyPressed(Util::Keycode::MOUSE_LB)) {
+        Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB)) {
         CloseSettingsMenu();
     }
 }

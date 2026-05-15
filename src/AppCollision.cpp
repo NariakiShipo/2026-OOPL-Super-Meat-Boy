@@ -5,9 +5,10 @@
 #include "Util/Logger.hpp"
 
 void App::ResolvePlayerPlatformCollisions(const glm::vec2 &previousPosition) {
-    constexpr float wallBounceMinSpeed = 100.0F;
-    constexpr float wallBounceDamping = 0.22F;
-    constexpr float kBreakableTopContactEpsilon = 0.5F;
+    const float wallBounceMinSpeed = m_Config.collision.wallBounceMinSpeed;
+    const float wallBounceDamping = m_Config.collision.wallBounceDamping;
+    const float breakableTopContactEpsilon =
+        m_Config.collision.breakableTopContactEpsilon;
 
     const auto makePlayerAabb = [this]() {
         return Game::MakeAabb(m_Player->m_Transform.translation,
@@ -42,8 +43,8 @@ void App::ResolvePlayerPlatformCollisions(const glm::vec2 &previousPosition) {
         const float currentBottom = currentPosition.y - playerHalf.y;
         const bool touchedFromTop =
             useRelaxedTopCheck
-                ? (previousBottom >= (platformTop - kBreakableTopContactEpsilon) &&
-                   currentBottom <= (platformTop + kBreakableTopContactEpsilon))
+                     ? (previousBottom >= (platformTop - breakableTopContactEpsilon) &&
+                         currentBottom <= (platformTop + breakableTopContactEpsilon))
                 : (previousBottom >= platformTop && currentBottom < platformTop);
 
         if (touchedFromTop) {

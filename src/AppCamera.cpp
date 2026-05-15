@@ -60,6 +60,6 @@ void App::UpdateCamera(const float dtMs) {
     // Keep status text anchored to the screen while world moves.
     if (m_StatusBoard != nullptr) {
         m_StatusBoard->m_Transform.translation =
-            m_CameraPosition + glm::vec2{-500.0F, 300.0F};
+            m_CameraPosition + m_Config.ui.statusOffset + m_Config.ui.statusText.position;
     }
 }

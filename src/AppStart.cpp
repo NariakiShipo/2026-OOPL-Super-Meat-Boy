@@ -19,11 +19,6 @@
 #include "Util/Animation.hpp"
 
 namespace {
-constexpr float kGoalSizeScale = 0.9F;
-constexpr float kMinCameraTravelX = 140.0F;
-constexpr float kMinCameraTravelY = 90.0F;
-constexpr float kCameraZoomOutFactor = 0.7F;
-
 float ComputeZoomForMinTravel(const float windowSize, const float worldSize,
                               const float minTravel) {
     const float clampedTravel = std::max(0.0F, minTravel);
@@ -104,16 +99,17 @@ std::shared_ptr<Util::GameObject> App::CreatePlatform(const glm::vec2 &position,
 }
 
 void App::InitWorld() {
+    LoadGameConfig();
     m_Root = Util::Renderer();
 
     m_Player = std::make_shared<Util::GameObject>();
 
-    m_PlayerIdleDrawable =
-        std::make_shared<Util::Image>(Common::ResolveAssetPath("images/meatboystanding.png"));
-    m_PlayerRunLeftDrawable =
-        std::make_shared<Util::Image>(Common::ResolveAssetPath("images/sprintLeft.png"));
-    m_PlayerRunRightDrawable =
-        std::make_shared<Util::Image>(Common::ResolveAssetPath("images/sprintRight.png"));
+    m_PlayerIdleDrawable = std::make_shared<Util::Image>(
+        Common::ResolveAssetPath(m_Config.player.idleSpritePath));
+    m_PlayerRunLeftDrawable = std::make_shared<Util::Image>(
+        Common::ResolveAssetPath(m_Config.player.runLeftSpritePath));
+    m_PlayerRunRightDrawable = std::make_shared<Util::Image>(
+        Common::ResolveAssetPath(m_Config.player.runRightSpritePath));
 
     m_PlayerJumpDrawable = m_PlayerIdleDrawable;
     m_PlayerFallDrawable = m_PlayerIdleDrawable;
@@ -121,55 +117,85 @@ void App::InitWorld() {
     m_Player->SetDrawable(m_PlayerIdleDrawable);
     m_PlayerAnimState = PlayerAnimState::IDLE;
     m_PlayerFacingRight = true;
-    m_Player->m_Transform.scale = {0.8F, 0.8F};
+    m_Player->m_Transform.scale = {m_Config.player.scale, m_Config.player.scale};
     m_PlayerColliderSize = m_PlayerIdleDrawable->GetSize() * m_Player->m_Transform.scale;
-    m_Player->SetZIndex(10.0F);
+    m_Player->SetZIndex(m_Config.player.zIndex);
 
     m_StatusBoard = std::make_shared<Util::GameObject>();
     m_StatusText = std::make_shared<Util::Text>(
-        Common::ResolveAssetPath("fonts/Inter.ttf"), 32, "Ready");
+        Common::ResolveAssetPath(m_Config.ui.statusText.fontPath),
+        m_Config.ui.statusText.fontSize,
+        m_Config.ui.statusText.text,
+        m_Config.ui.statusText.color);
     m_StatusBoard->SetDrawable(m_StatusText);
-    m_StatusBoard->SetZIndex(100.0F);
+    m_StatusBoard->SetZIndex(m_Config.ui.statusText.zIndex);
 
     m_TitleBackground = std::make_shared<Util::GameObject>();
     auto titleBackground = std::make_shared<Util::Image>(
-        Common::ResolveAssetPath("images/titlescreen.png"));
+        Common::ResolveAssetPath(m_Config.ui.titleBackgroundPath));
     m_TitleBackground->SetDrawable(titleBackground);
     const auto titleBackgroundSize = titleBackground->GetSize();
     m_TitleBackground->m_Transform.scale = {
         static_cast<float>(WINDOW_WIDTH) / titleBackgroundSize.x,
         static_cast<float>(WINDOW_HEIGHT) / titleBackgroundSize.y,
     };
-    m_TitleBackground->SetZIndex(-100.0F);
+    m_TitleBackground->SetZIndex(m_Config.ui.titleBackgroundZ);
 
     m_StartButton = CreateTextObject(
-        Common::ResolveAssetPath("fonts/Inter.ttf"), 40, "start game",
-        {0.0F, -120.0F}, 130.0F, Util::Color(255, 255, 255, 255));
+        Common::ResolveAssetPath(m_Config.ui.startButton.fontPath),
+        m_Config.ui.startButton.fontSize,
+        m_Config.ui.startButton.text,
+        m_Config.ui.startButton.position,
+        m_Config.ui.startButton.zIndex,
+        m_Config.ui.startButton.color);
 
     m_SettingsButton = CreateTextObject(
-        Common::ResolveAssetPath("fonts/Inter.ttf"), 40, "settings",
-        {0.0F, -190.0F}, 130.0F, Util::Color(255, 255, 255, 255));
+        Common::ResolveAssetPath(m_Config.ui.settingsButton.fontPath),
+        m_Config.ui.settingsButton.fontSize,
+        m_Config.ui.settingsButton.text,
+        m_Config.ui.settingsButton.position,
+        m_Config.ui.settingsButton.zIndex,
+        m_Config.ui.settingsButton.color);
 
     m_SettingsTitleText = CreateTextObject(
-        Common::ResolveAssetPath("fonts/Inter.ttf"), 44, "settings",
-        {0.0F, 130.0F}, 210.0F, Util::Color(255, 244, 200, 255));
+        Common::ResolveAssetPath(m_Config.ui.settingsTitle.fontPath),
+        m_Config.ui.settingsTitle.fontSize,
+        m_Config.ui.settingsTitle.text,
+        m_Config.ui.settingsTitle.position,
+        m_Config.ui.settingsTitle.zIndex,
+        m_Config.ui.settingsTitle.color);
 
     m_BgmSettingText = CreateTextObject(
-        Common::ResolveAssetPath("fonts/Inter.ttf"), 30, "bgm", {0.0F, 30.0F},
-        210.0F, Util::Color(255, 255, 255, 255));
+        Common::ResolveAssetPath(m_Config.ui.bgmLabel.fontPath),
+        m_Config.ui.bgmLabel.fontSize,
+        m_Config.ui.bgmLabel.text,
+        m_Config.ui.bgmLabel.position,
+        m_Config.ui.bgmLabel.zIndex,
+        m_Config.ui.bgmLabel.color);
 
     m_SfxSettingText = CreateTextObject(
-        Common::ResolveAssetPath("fonts/Inter.ttf"), 30, "sfx", {0.0F, -60.0F},
-        210.0F, Util::Color(255, 255, 255, 255));
+        Common::ResolveAssetPath(m_Config.ui.sfxLabel.fontPath),
+        m_Config.ui.sfxLabel.fontSize,
+        m_Config.ui.sfxLabel.text,
+        m_Config.ui.sfxLabel.position,
+        m_Config.ui.sfxLabel.zIndex,
+        m_Config.ui.sfxLabel.color);
 
     m_SettingsBackButton = CreateTextObject(
-        Common::ResolveAssetPath("fonts/Inter.ttf"), 36, "back",
-        {0.0F, -210.0F}, 210.0F, Util::Color(255, 255, 255, 255));
+        Common::ResolveAssetPath(m_Config.ui.backButton.fontPath),
+        m_Config.ui.backButton.fontSize,
+        m_Config.ui.backButton.text,
+        m_Config.ui.backButton.position,
+        m_Config.ui.backButton.zIndex,
+        m_Config.ui.backButton.color);
 
     m_SettingsHelpText = CreateTextObject(
-        Common::ResolveAssetPath("fonts/Inter.ttf"), 22,
-        "drag the bars to set bgm and sfx volume", {0.0F, -270.0F}, 210.0F,
-        Util::Color(220, 220, 220, 255));
+        Common::ResolveAssetPath(m_Config.ui.helpText.fontPath),
+        m_Config.ui.helpText.fontSize,
+        m_Config.ui.helpText.text,
+        m_Config.ui.helpText.position,
+        m_Config.ui.helpText.zIndex,
+        m_Config.ui.helpText.color);
 
     m_TitleScreenObjects = {
         m_TitleBackground,
@@ -186,9 +212,9 @@ void App::InitWorld() {
     };
 
     m_TitleBGM = std::make_shared<Util::BGM>(
-        Common::ResolveAssetPath("audio/testbgm.mp3"));
+        Common::ResolveAssetPath(m_Config.audio.titleBgmPath));
     m_ButtonSFX =
-        std::make_shared<Util::SFX>(Common::ResolveAssetPath("audio/Click.wav"));
+        std::make_shared<Util::SFX>(Common::ResolveAssetPath(m_Config.audio.buttonSfxPath));
 
     m_AudioSettingsPath = std::filesystem::current_path() / "audio_settings.txt";
     LoadAudioSettings();
@@ -311,7 +337,9 @@ void App::LoadLevel(const std::size_t levelIndex) {
                                               cfg.visible));
     }
 
-    m_GoalFlag = CreatePlatform(level.goalPosition, level.goalSize * kGoalSizeScale, 4.0F,
+    m_GoalFlag = CreatePlatform(level.goalPosition,
+                                level.goalSize * m_Config.goalSizeScale,
+                                4.0F,
                                 level.goalTexturePath);
 
     m_PlayerSpawn = level.spawn;
@@ -331,10 +359,10 @@ void App::LoadLevel(const std::size_t levelIndex) {
     const float worldHeight = m_WorldBoundsMax.y - m_WorldBoundsMin.y;
     const float minZoomForTravelX =
         ComputeZoomForMinTravel(static_cast<float>(WINDOW_WIDTH), worldWidth,
-                                kMinCameraTravelX);
+                                m_Config.camera.minTravelX);
     const float minZoomForTravelY =
         ComputeZoomForMinTravel(static_cast<float>(WINDOW_HEIGHT), worldHeight,
-                                kMinCameraTravelY);
+                                m_Config.camera.minTravelY);
 
     if (std::isfinite(minZoomForTravelX)) {
         m_CameraZoom = std::max(m_CameraZoom, minZoomForTravelX);
@@ -343,7 +371,7 @@ void App::LoadLevel(const std::size_t levelIndex) {
         m_CameraZoom = std::max(m_CameraZoom, minZoomForTravelY);
     }
 
-    m_CameraZoom *= kCameraZoomOutFactor;
+    m_CameraZoom *= m_Config.camera.zoomOutFactor;
 
     if (!std::isfinite(m_CameraZoom) || m_CameraZoom <= 0.0F) {
         m_CameraZoom = 1.0F;

@@ -9,6 +9,7 @@
 
 #include "game/LevelData.hpp"
 
+#include "Util/Color.hpp"
 #include "Util/GameObject.hpp"
 #include "Util/Animation.hpp"
 #include "Util/Renderer.hpp"
@@ -46,6 +47,7 @@ public:
     void End(); // NOLINT(readability-convert-member-functions-to-static)
 
 private:
+    void LoadGameConfig();
     void InitWorld();
     void LoadLevel(std::size_t levelIndex);
     void ShowTitleScreen();
@@ -75,6 +77,151 @@ private:
                                                      bool visible = true) const;
 
 private:
+    struct UiTextSpec {
+        std::string fontPath = "fonts/Inter.ttf";
+        int fontSize = 32;
+        std::string text;
+        glm::vec2 position = {0.0F, 0.0F};
+        float zIndex = 0.0F;
+        Util::Color color = Util::Color(255, 255, 255, 255);
+    };
+
+    struct AudioConfig {
+        std::string titleBgmPath = "audio/testbgm.mp3";
+        std::string buttonSfxPath = "audio/Click.wav";
+        int defaultBgmVolume = 100;
+        int defaultSfxVolume = 100;
+        int maxVolume = 128;
+        int sliderBarWidth = 20;
+    };
+
+    struct UiConfig {
+        std::string titleBackgroundPath = "images/titlescreen.png";
+        float titleBackgroundZ = -100.0F;
+        Util::Color buttonDefaultColor = Util::Color(255, 255, 255, 255);
+        Util::Color buttonHoverColor = Util::Color(255, 244, 200, 255);
+        UiTextSpec startButton{
+            "fonts/Inter.ttf",
+            40,
+            "start game",
+            {0.0F, -120.0F},
+            130.0F,
+            Util::Color(255, 255, 255, 255),
+        };
+        UiTextSpec settingsButton{
+            "fonts/Inter.ttf",
+            40,
+            "settings",
+            {0.0F, -190.0F},
+            130.0F,
+            Util::Color(255, 255, 255, 255),
+        };
+        UiTextSpec settingsTitle{
+            "fonts/Inter.ttf",
+            44,
+            "settings",
+            {0.0F, 130.0F},
+            210.0F,
+            Util::Color(255, 244, 200, 255),
+        };
+        UiTextSpec bgmLabel{
+            "fonts/Inter.ttf",
+            30,
+            "bgm",
+            {0.0F, 30.0F},
+            210.0F,
+            Util::Color(255, 255, 255, 255),
+        };
+        UiTextSpec sfxLabel{
+            "fonts/Inter.ttf",
+            30,
+            "sfx",
+            {0.0F, -60.0F},
+            210.0F,
+            Util::Color(255, 255, 255, 255),
+        };
+        UiTextSpec backButton{
+            "fonts/Inter.ttf",
+            36,
+            "back",
+            {0.0F, -210.0F},
+            210.0F,
+            Util::Color(255, 255, 255, 255),
+        };
+        UiTextSpec helpText{
+            "fonts/Inter.ttf",
+            22,
+            "drag the bars to set bgm and sfx volume",
+            {0.0F, -270.0F},
+            210.0F,
+            Util::Color(220, 220, 220, 255),
+        };
+        UiTextSpec statusText{
+            "fonts/Inter.ttf",
+            32,
+            "Ready",
+            {0.0F, 0.0F},
+            100.0F,
+            Util::Color(255, 255, 255, 255),
+        };
+        glm::vec2 statusOffset = {-500.0F, 300.0F};
+        std::string levelClearText = "LEVEL CLEAR! \nPress N for next level.";
+    };
+
+    struct PlayerConfig {
+        std::string idleSpritePath = "images/meatboystanding.png";
+        std::string runLeftSpritePath = "images/sprintLeft.png";
+        std::string runRightSpritePath = "images/sprintRight.png";
+        float scale = 0.8F;
+        float zIndex = 10.0F;
+        struct Movement {
+            float moveSpeed = 360.0F;
+            float sprintMultiplier = 1.8F;
+            float jumpVelocity = 500.0F;
+            float jumpHoldMaxMs = 170.0F;
+            float jumpHoldBoost = 2000.0F;
+            float shortHopCutRatio = 0.42F;
+            float wallJumpHorizontalVelocity = 430.0F;
+            float wallJumpControlLockMs = 140.0F;
+            float wallReattachCooldownMs = 110.0F;
+            float wallSlideMaxFallSpeed = 260.0F;
+            float gravity = -1800.0F;
+        } movement;
+        struct Animation {
+            float airborneThreshold = 20.0F;
+            float runThreshold = 1.0F;
+        } animation;
+    };
+
+    struct CameraConfig {
+        float deadZoneHalfWidth = 120.0F;
+        float deadZoneHalfHeight = 72.0F;
+        float followSpeed = 9.0F;
+        float lookaheadTime = 0.30F;
+        float lookaheadResponse = 12.0F;
+        float lookaheadMaxX = 300.0F;
+        float lookaheadMaxUp = 90.0F;
+        float lookaheadMaxDown = 340.0F;
+        float minTravelX = 140.0F;
+        float minTravelY = 90.0F;
+        float zoomOutFactor = 0.7F;
+    };
+
+    struct CollisionConfig {
+        float wallBounceMinSpeed = 100.0F;
+        float wallBounceDamping = 0.22F;
+        float breakableTopContactEpsilon = 0.5F;
+    };
+
+    struct GameplayConfig {
+        AudioConfig audio;
+        UiConfig ui;
+        PlayerConfig player;
+        CameraConfig camera;
+        CollisionConfig collision;
+        float goalSizeScale = 0.9F;
+    };
+
     struct BreakableBlock {
         std::shared_ptr<Util::GameObject> object;
         std::shared_ptr<Util::Animation> animation;
@@ -127,6 +274,8 @@ private:
 
     std::vector<Game::LevelConfig> m_Levels;
     std::size_t m_CurrentLevelIndex = 0;
+
+    GameplayConfig m_Config;
 
     AudioSettings m_AudioSettings;
     std::filesystem::path m_AudioSettingsPath = "audio_settings.txt";

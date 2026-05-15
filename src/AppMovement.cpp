@@ -8,17 +8,7 @@
 
 void App::StepPlayer(const float dtMs) {
     const float dtSec = dtMs / 1000.0F;
-    constexpr float moveSpeed = 360.0F;
-    constexpr float sprintMultiplier = 1.8F;
-    constexpr float jumpVelocity = 500.0F;
-    constexpr float jumpHoldMaxMs = 170.0F;
-    constexpr float jumpHoldBoost = 2000.0F;
-    constexpr float shortHopCutRatio = 0.42F;
-    constexpr float wallJumpHorizontalVelocity = 430.0F;
-    constexpr float wallJumpControlLockMs = 140.0F;
-    constexpr float wallReattachCooldownMs = 110.0F;
-    constexpr float wallSlideMaxFallSpeed = 260.0F;
-    constexpr float gravity = -1800.0F;
+    const auto &movement = m_Config.player.movement;
 
     if (m_WallReattachCooldownMs > 0.0F) {
         m_WallReattachCooldownMs = std::max(0.0F, m_WallReattachCooldownMs - dtMs);
@@ -36,7 +26,9 @@ void App::StepPlayer(const float dtMs) {
 
     const bool sprinting = Util::Input::IsKeyPressed(Util::Keycode::LSHIFT) ||
                            Util::Input::IsKeyPressed(Util::Keycode::RSHIFT);
-    const float currentMoveSpeed = sprinting ? moveSpeed * sprintMultiplier : moveSpeed;
+    const float currentMoveSpeed =
+        sprinting ? movement.moveSpeed * movement.sprintMultiplier
+                  : movement.moveSpeed;
     if (m_WallControlLockTimerMs > 0.0F) {
         m_WallControlLockTimerMs = std::max(0.0F, m_WallControlLockTimerMs - dtMs);
     } else {
@@ -52,11 +44,12 @@ void App::StepPlayer(const float dtMs) {
 
     const bool canWallJump = m_PlayerOnWall && !m_PlayerOnGround;
     if ((m_PlayerOnGround || canWallJump) && jumpPressed) {
-        m_PlayerVelocity.y = jumpVelocity;
+        m_PlayerVelocity.y = movement.jumpVelocity;
         if (canWallJump) {
-            m_PlayerVelocity.x = wallJumpHorizontalVelocity * m_WallJumpDirection;
-            m_WallControlLockTimerMs = wallJumpControlLockMs;
-            m_WallReattachCooldownMs = wallReattachCooldownMs;
+            m_PlayerVelocity.x =
+                movement.wallJumpHorizontalVelocity * m_WallJumpDirection;
+            m_WallControlLockTimerMs = movement.wallJumpControlLockMs;
+            m_WallReattachCooldownMs = movement.wallReattachCooldownMs;
             m_PlayerOnWall = false;
             m_WallJumpDirection = 0.0F;
         }
@@ -65,17 +58,17 @@ void App::StepPlayer(const float dtMs) {
         m_PlayerOnGround = false;
     }
 
-    if (m_IsJumping && jumpHeld && m_JumpHoldTimerMs < jumpHoldMaxMs) {
-        m_PlayerVelocity.y += jumpHoldBoost * dtSec;
+    if (m_IsJumping && jumpHeld && m_JumpHoldTimerMs < movement.jumpHoldMaxMs) {
+        m_PlayerVelocity.y += movement.jumpHoldBoost * dtSec;
         m_JumpHoldTimerMs += dtMs;
     }
 
     if (m_IsJumping && !jumpHeld && m_PlayerVelocity.y > 0.0F) {
-        m_PlayerVelocity.y *= shortHopCutRatio;
+        m_PlayerVelocity.y *= movement.shortHopCutRatio;
         m_IsJumping = false;
     }
 
-    m_PlayerVelocity.y += gravity * dtSec;
+    m_PlayerVelocity.y += movement.gravity * dtSec;
 
     const auto previousPosition = m_Player->m_Transform.translation;
     m_Player->m_Transform.translation += m_PlayerVelocity * dtSec;
@@ -87,8 +80,8 @@ void App::StepPlayer(const float dtMs) {
 
     // Wall slide: cap downward speed while sticking to a platform side.
     if (!m_PlayerOnGround && m_PlayerOnWall &&
-        m_PlayerVelocity.y < -wallSlideMaxFallSpeed) {
-        m_PlayerVelocity.y = -wallSlideMaxFallSpeed;
+        m_PlayerVelocity.y < -movement.wallSlideMaxFallSpeed) {
+        m_PlayerVelocity.y = -movement.wallSlideMaxFallSpeed;
         m_IsJumping = false;
     }
 
@@ -146,7 +139,7 @@ void App::StepPlayer(const float dtMs) {
             m_PlayerAnimState = PlayerAnimState::IDLE;
             ApplyPlayerDrawable(m_PlayerIdleDrawable);
             if (m_StatusText != nullptr) {
-               m_StatusText->SetText("LEVEL CLEAR! \nPress N for next level.");
+                    m_StatusText->SetText(m_Config.ui.levelClearText);
             }
             LOG_INFO("Level clear!");
         }

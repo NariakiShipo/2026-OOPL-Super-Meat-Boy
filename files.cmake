@@ -1,4 +1,5 @@
 set(SRC_FILES
+    AppConfig.cpp
     AppStart.cpp
     AppMenu.cpp
     AppPlayer.cpp

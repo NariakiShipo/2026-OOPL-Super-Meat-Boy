@@ -1,0 +1,127 @@
+{
+  "audio": {
+    "titleBgmPath": "audio/testbgm.mp3",
+    "buttonSfxPath": "audio/Click.wav",
+    "defaultBgmVolume": 100,
+    "defaultSfxVolume": 100,
+    "maxVolume": 128,
+    "sliderBarWidth": 20
+  },
+  "ui": {
+    "titleBackgroundPath": "images/titlescreen.png",
+    "titleBackgroundZ": -100.0,
+    "buttonColors": {
+      "default": [255, 255, 255, 255],
+      "hover": [255, 244, 200, 255]
+    },
+    "startButton": {
+      "fontPath": "fonts/Inter.ttf",
+      "fontSize": 40,
+      "text": "start game",
+      "position": [0.0, -120.0],
+      "zIndex": 130.0,
+      "color": [255, 255, 255, 255]
+    },
+    "settingsButton": {
+      "fontPath": "fonts/Inter.ttf",
+      "fontSize": 40,
+      "text": "settings",
+      "position": [0.0, -190.0],
+      "zIndex": 130.0,
+      "color": [255, 255, 255, 255]
+    },
+    "settingsTitle": {
+      "fontPath": "fonts/Inter.ttf",
+      "fontSize": 44,
+      "text": "settings",
+      "position": [0.0, 130.0],
+      "zIndex": 210.0,
+      "color": [255, 244, 200, 255]
+    },
+    "bgmLabel": {
+      "fontPath": "fonts/Inter.ttf",
+      "fontSize": 30,
+      "text": "bgm",
+      "position": [0.0, 30.0],
+      "zIndex": 210.0,
+      "color": [255, 255, 255, 255]
+    },
+    "sfxLabel": {
+      "fontPath": "fonts/Inter.ttf",
+      "fontSize": 30,
+      "text": "sfx",
+      "position": [0.0, -60.0],
+      "zIndex": 210.0,
+      "color": [255, 255, 255, 255]
+    },
+    "backButton": {
+      "fontPath": "fonts/Inter.ttf",
+      "fontSize": 36,
+      "text": "back",
+      "position": [0.0, -210.0],
+      "zIndex": 210.0,
+      "color": [255, 255, 255, 255]
+    },
+    "helpText": {
+      "fontPath": "fonts/Inter.ttf",
+      "fontSize": 22,
+      "text": "drag the bars to set bgm and sfx volume",
+      "position": [0.0, -270.0],
+      "zIndex": 210.0,
+      "color": [220, 220, 220, 255]
+    },
+    "statusText": {
+      "fontPath": "fonts/Inter.ttf",
+      "fontSize": 32,
+      "text": "Ready",
+      "position": [0.0, 0.0],
+      "zIndex": 100.0,
+      "color": [255, 255, 255, 255]
+    },
+    "statusOffset": [-500.0, 300.0],
+    "levelClearText": "LEVEL CLEAR! \nPress N for next level."
+  },
+  "player": {
+    "idleSpritePath": "images/meatboystanding.png",
+    "runLeftSpritePath": "images/sprintLeft.png",
+    "runRightSpritePath": "images/sprintRight.png",
+    "scale": 0.8,
+    "zIndex": 10.0,
+    "movement": {
+      "moveSpeed": 360.0,
+      "sprintMultiplier": 1.8,
+      "jumpVelocity": 500.0,
+      "jumpHoldMaxMs": 170.0,
+      "jumpHoldBoost": 2000.0,
+      "shortHopCutRatio": 0.42,
+      "wallJumpHorizontalVelocity": 430.0,
+      "wallJumpControlLockMs": 140.0,
+      "wallReattachCooldownMs": 110.0,
+      "wallSlideMaxFallSpeed": 260.0,
+      "gravity": -1800.0
+    },
+    "animation": {
+      "airborneThreshold": 20.0,
+      "runThreshold": 1.0
+    }
+  },
+  "camera": {
+    "deadZoneHalfWidth": 120.0,
+    "deadZoneHalfHeight": 72.0,
+    "followSpeed": 9.0,
+    "lookaheadTime": 0.3,
+    "lookaheadResponse": 12.0,
+    "lookaheadMaxX": 300.0,
+    "lookaheadMaxUp": 90.0,
+    "lookaheadMaxDown": 340.0,
+    "minTravelX": 140.0,
+    "minTravelY": 90.0,
+    "zoomOutFactor": 0.7
+  },
+  "collision": {
+    "wallBounceMinSpeed": 100.0,
+    "wallBounceDamping": 0.22,
+    "breakableTopContactEpsilon": 0.5
+  },
+  "goalSizeScale": 0.9
+}
