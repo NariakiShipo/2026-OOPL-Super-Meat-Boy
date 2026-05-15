@@ -1,5 +1,6 @@
 set(SRC_FILES
     AppStart.cpp
+    AppMenu.cpp
     AppPlayer.cpp
     AppCollision.cpp
     AppMovement.cpp

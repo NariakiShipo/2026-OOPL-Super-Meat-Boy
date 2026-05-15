@@ -1,5 +1,7 @@
 #include "App.hpp"
 
+#include <filesystem>
+
 #include "common/AssetPath.hpp"
 #include "game/BoxDrawable.hpp"
 #include "game/Collision.hpp"
@@ -7,19 +9,61 @@
 
 #include "config.hpp"
 
+#include "Util/Color.hpp"
+#include "Util/BGM.hpp"
 #include "Util/Image.hpp"
 #include "Util/Logger.hpp"
+#include "Util/SFX.hpp"
 #include "Util/Text.hpp"
 #include "Util/TransformUtils.hpp"
 #include "Util/Animation.hpp"
 
 namespace {
+constexpr float kGoalSizeScale = 0.9F;
+constexpr float kMinCameraTravelX = 140.0F;
+constexpr float kMinCameraTravelY = 90.0F;
+constexpr float kCameraZoomOutFactor = 0.7F;
+
+float ComputeZoomForMinTravel(const float windowSize, const float worldSize,
+                              const float minTravel) {
+    const float clampedTravel = std::max(0.0F, minTravel);
+    const float visibleSize = worldSize - clampedTravel;
+    if (visibleSize <= 1.0F) {
+        return std::numeric_limits<float>::infinity();
+    }
+    return windowSize / visibleSize;
+}
+
 float ClampToRangeOrCenter(const float value, const float minValue,
                            const float maxValue) {
     if (minValue > maxValue) {
         return (minValue + maxValue) * 0.5F;
     }
     return std::clamp(value, minValue, maxValue);
+}
+
+std::string ExtractLevelName(const std::string &mapPath) {
+    const std::size_t slashPos = mapPath.find_last_of("/\\");
+    const std::size_t nameStart =
+        (slashPos == std::string::npos) ? 0 : (slashPos + 1);
+    const std::size_t dotPos = mapPath.find_last_of('.');
+
+    if (dotPos == std::string::npos || dotPos < nameStart) {
+        return mapPath.substr(nameStart);
+    }
+
+    return mapPath.substr(nameStart, dotPos - nameStart);
+}
+
+std::shared_ptr<Util::GameObject> CreateTextObject(
+    const std::string &fontPath, const int fontSize, const std::string &text,
+    const glm::vec2 &translation, const float zIndex,
+    const Util::Color &color = Util::Color(255, 255, 255, 255)) {
+    auto object = std::make_shared<Util::GameObject>();
+    object->SetDrawable(std::make_shared<Util::Text>(fontPath, fontSize, text, color));
+    object->m_Transform.translation = translation;
+    object->SetZIndex(zIndex);
+    return object;
 }
 } // namespace
 
@@ -77,7 +121,7 @@ void App::InitWorld() {
     m_Player->SetDrawable(m_PlayerIdleDrawable);
     m_PlayerAnimState = PlayerAnimState::IDLE;
     m_PlayerFacingRight = true;
-    m_Player->m_Transform.scale = {1.0F, 1.0F};
+    m_Player->m_Transform.scale = {0.8F, 0.8F};
     m_PlayerColliderSize = m_PlayerIdleDrawable->GetSize() * m_Player->m_Transform.scale;
     m_Player->SetZIndex(10.0F);
 
@@ -87,9 +131,73 @@ void App::InitWorld() {
     m_StatusBoard->SetDrawable(m_StatusText);
     m_StatusBoard->SetZIndex(100.0F);
 
+    m_TitleBackground = std::make_shared<Util::GameObject>();
+    auto titleBackground = std::make_shared<Util::Image>(
+        Common::ResolveAssetPath("images/titlescreen.png"));
+    m_TitleBackground->SetDrawable(titleBackground);
+    const auto titleBackgroundSize = titleBackground->GetSize();
+    m_TitleBackground->m_Transform.scale = {
+        static_cast<float>(WINDOW_WIDTH) / titleBackgroundSize.x,
+        static_cast<float>(WINDOW_HEIGHT) / titleBackgroundSize.y,
+    };
+    m_TitleBackground->SetZIndex(-100.0F);
+
+    m_StartButton = CreateTextObject(
+        Common::ResolveAssetPath("fonts/Inter.ttf"), 40, "start game",
+        {0.0F, -120.0F}, 130.0F, Util::Color(255, 255, 255, 255));
+
+    m_SettingsButton = CreateTextObject(
+        Common::ResolveAssetPath("fonts/Inter.ttf"), 40, "settings",
+        {0.0F, -190.0F}, 130.0F, Util::Color(255, 255, 255, 255));
+
+    m_SettingsTitleText = CreateTextObject(
+        Common::ResolveAssetPath("fonts/Inter.ttf"), 44, "settings",
+        {0.0F, 130.0F}, 210.0F, Util::Color(255, 244, 200, 255));
+
+    m_BgmSettingText = CreateTextObject(
+        Common::ResolveAssetPath("fonts/Inter.ttf"), 30, "bgm", {0.0F, 30.0F},
+        210.0F, Util::Color(255, 255, 255, 255));
+
+    m_SfxSettingText = CreateTextObject(
+        Common::ResolveAssetPath("fonts/Inter.ttf"), 30, "sfx", {0.0F, -60.0F},
+        210.0F, Util::Color(255, 255, 255, 255));
+
+    m_SettingsBackButton = CreateTextObject(
+        Common::ResolveAssetPath("fonts/Inter.ttf"), 36, "back",
+        {0.0F, -210.0F}, 210.0F, Util::Color(255, 255, 255, 255));
+
+    m_SettingsHelpText = CreateTextObject(
+        Common::ResolveAssetPath("fonts/Inter.ttf"), 22,
+        "drag the bars to set bgm and sfx volume", {0.0F, -270.0F}, 210.0F,
+        Util::Color(220, 220, 220, 255));
+
+    m_TitleScreenObjects = {
+        m_TitleBackground,
+        m_StartButton,
+        m_SettingsButton,
+    };
+
+    m_SettingsObjects = {
+        m_SettingsTitleText,
+        m_BgmSettingText,
+        m_SfxSettingText,
+        m_SettingsBackButton,
+        m_SettingsHelpText,
+    };
+
+    m_TitleBGM = std::make_shared<Util::BGM>(
+        Common::ResolveAssetPath("audio/testbgm.mp3"));
+    m_ButtonSFX =
+        std::make_shared<Util::SFX>(Common::ResolveAssetPath("audio/Click.wav"));
+
+    m_AudioSettingsPath = std::filesystem::current_path() / "audio_settings.txt";
+    LoadAudioSettings();
+    ApplyAudioSettings();
+    m_TitleBGM->Play(-1);
+
     m_Levels = Game::BuildDefaultLevels();
     m_CurrentLevelIndex = 0;
-    LoadLevel(m_CurrentLevelIndex);
+    ShowTitleScreen();
 }
 
 void App::LoadLevel(const std::size_t levelIndex) {
@@ -203,24 +311,8 @@ void App::LoadLevel(const std::size_t levelIndex) {
                                               cfg.visible));
     }
 
-    m_GoalFlag = CreatePlatform(level.goalPosition, level.goalSize, 4.0F,
+    m_GoalFlag = CreatePlatform(level.goalPosition, level.goalSize * kGoalSizeScale, 4.0F,
                                 level.goalTexturePath);
-
-    for (const auto &tile : m_LevelRenderTiles) {
-        m_Root.AddChild(tile);
-    }
-    for (const auto &platform : m_Platforms) {
-        m_Root.AddChild(platform);
-    }
-    for (const auto &breakable : m_BreakableBlocks) {
-        m_Root.AddChild(breakable.object);
-    }
-    for (const auto &deathZone : m_DeathZones) {
-        m_Root.AddChild(deathZone);
-    }
-    m_Root.AddChild(m_GoalFlag);
-    m_Root.AddChild(m_Player);
-    m_Root.AddChild(m_StatusBoard);
 
     m_PlayerSpawn = level.spawn;
     m_WorldBoundsMin = level.worldBoundsMin;
@@ -234,6 +326,25 @@ void App::LoadLevel(const std::size_t levelIndex) {
                             ? static_cast<float>(WINDOW_HEIGHT) / level.mapPixelSize.y
                             : 1.0F;
     m_CameraZoom = std::min(zoomX, zoomY);
+
+    const float worldWidth = m_WorldBoundsMax.x - m_WorldBoundsMin.x;
+    const float worldHeight = m_WorldBoundsMax.y - m_WorldBoundsMin.y;
+    const float minZoomForTravelX =
+        ComputeZoomForMinTravel(static_cast<float>(WINDOW_WIDTH), worldWidth,
+                                kMinCameraTravelX);
+    const float minZoomForTravelY =
+        ComputeZoomForMinTravel(static_cast<float>(WINDOW_HEIGHT), worldHeight,
+                                kMinCameraTravelY);
+
+    if (std::isfinite(minZoomForTravelX)) {
+        m_CameraZoom = std::max(m_CameraZoom, minZoomForTravelX);
+    }
+    if (std::isfinite(minZoomForTravelY)) {
+        m_CameraZoom = std::max(m_CameraZoom, minZoomForTravelY);
+    }
+
+    m_CameraZoom *= kCameraZoomOutFactor;
+
     if (!std::isfinite(m_CameraZoom) || m_CameraZoom <= 0.0F) {
         m_CameraZoom = 1.0F;
     }
@@ -282,9 +393,10 @@ void App::LoadLevel(const std::size_t levelIndex) {
 
     m_LevelCleared = false;
     if (m_StatusText != nullptr) {
-        m_StatusText->SetText("Reach the flag. Avoid red blocks.");
+        m_StatusText->SetText(ExtractLevelName(level.mapPath));
     }
 
+    ShowGameplayScreen();
     RespawnPlayer();
 }
 
@@ -293,5 +405,5 @@ void App::Start() {
 
     InitWorld();
 
-    m_CurrentState = State::UPDATE;
+    m_CurrentState = State::TITLE;
 }

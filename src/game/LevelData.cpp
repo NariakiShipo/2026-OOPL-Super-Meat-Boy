@@ -7,11 +7,17 @@
 namespace Game {
 std::vector<LevelConfig> BuildDefaultLevels() {
     std::vector<LevelConfig> levels;
-    levels.reserve(2);
+    levels.reserve(8);
 
     try {
         levels.push_back(LoadLevelFromTmx("images/forest1.tmx"));
         levels.push_back(LoadLevelFromTmx("images/forest2.tmx"));
+        levels.push_back(LoadLevelFromTmx("images/forest3.tmx"));
+        levels.push_back(LoadLevelFromTmx("images/forest4.tmx"));
+        levels.push_back(LoadLevelFromTmx("images/forest5.tmx"));
+        levels.push_back(LoadLevelFromTmx("images/forest6.tmx"));
+        levels.push_back(LoadLevelFromTmx("images/forest7.tmx"));
+        levels.push_back(LoadLevelFromTmx("images/forest8.tmx"));
         return levels;
     } catch (const std::exception &e) {
         LOG_ERROR("Failed to build TMX levels: {}", e.what());

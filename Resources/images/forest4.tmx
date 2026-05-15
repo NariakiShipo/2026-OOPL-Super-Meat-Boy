@@ -116,7 +116,7 @@
   <object id="44" x="298" y="0" width="518" height="119"/>
  </objectgroup>
  <objectgroup id="5" name="saws">
-  <object id="2" x="142.667" y="57.3333" width="75" height="75">
+  <object id="2" x="158.903" y="73.5693" width="42.5281" height="42.5281">
    <ellipse/>
   </object>
   <object id="10" x="312" y="217.333" width="200" height="200">
@@ -128,7 +128,7 @@
   <object id="12" x="998.667" y="44" width="75" height="75">
    <ellipse/>
   </object>
-  <object id="45" x="387" y="64.333" width="85" height="85">
+  <object id="45" x="396.392" y="67.4636" width="61.5203" height="61.5203">
    <ellipse/>
   </object>
   <object id="46" x="715.667" y="98.666" width="75" height="75">

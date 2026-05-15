@@ -110,7 +110,6 @@ void App::StepPlayer(const float dtMs) {
     m_BreakableDebugLogCooldownMs =
         std::max(0.0F, m_BreakableDebugLogCooldownMs - dtMs);
     if (m_BreakableDebugLogCooldownMs <= 0.0F && !m_BreakableBlocks.empty()) {
-        std::size_t nearestIndex = 0;
         float nearestDistSq = std::numeric_limits<float>::max();
         bool foundValidBreakable = false;
 
@@ -126,7 +125,6 @@ void App::StepPlayer(const float dtMs) {
             const float distSq = (dx * dx) + (dy * dy);
             if (distSq < nearestDistSq) {
                 nearestDistSq = distSq;
-                nearestIndex = i;
                 foundValidBreakable = true;
             }
         }
@@ -148,7 +146,7 @@ void App::StepPlayer(const float dtMs) {
             m_PlayerAnimState = PlayerAnimState::IDLE;
             ApplyPlayerDrawable(m_PlayerIdleDrawable);
             if (m_StatusText != nullptr) {
-                m_StatusText->SetText("LEVEL CLEAR! Press N for next level.");
+               m_StatusText->SetText("LEVEL CLEAR! \nPress N for next level.");
             }
             LOG_INFO("Level clear!");
         }
@@ -157,12 +155,10 @@ void App::StepPlayer(const float dtMs) {
     const float outOfBoundsMinX = m_WorldBoundsMin.x - m_PlayerColliderSize.x;
     const float outOfBoundsMaxX = m_WorldBoundsMax.x + m_PlayerColliderSize.x;
     const float outOfBoundsMinY = m_WorldBoundsMin.y - m_PlayerColliderSize.y;
-    const float outOfBoundsMaxY = m_WorldBoundsMax.y + m_PlayerColliderSize.y;
     const auto playerPosition = m_Player->m_Transform.translation;
     const bool isOutOfBounds = playerPosition.x < outOfBoundsMinX ||
                                playerPosition.x > outOfBoundsMaxX ||
-                               playerPosition.y < outOfBoundsMinY ||
-                               playerPosition.y > outOfBoundsMaxY;
+                               playerPosition.y < outOfBoundsMinY;
 
     if (isOutOfBounds ||
         Util::Input::IsKeyDown(Util::Keycode::R)) {

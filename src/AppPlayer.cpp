@@ -71,7 +71,7 @@ void App::RespawnPlayer() {
     ApplyPlayerDrawable(m_PlayerIdleDrawable);
     m_LevelCleared = false;
     if (m_StatusText != nullptr) {
-        m_StatusText->SetText("Reach the flag. Avoid red blocks.");
+        //m_StatusText->SetText("Reach the flag. Avoid red blocks.");
     }
     ++m_RespawnCount;
     LOG_INFO("Respawn count: {}", m_RespawnCount);
