@@ -1,7 +1,10 @@
 #include "game/TmxLoader.hpp"
 
+#include <fstream>
 #include <filesystem>
 #include <limits>
+
+#include <nlohmann/json.hpp>
 
 #include <tmxlite/Map.hpp>
 #include <tmxlite/ImageLayer.hpp>
@@ -13,16 +16,170 @@
 #include "common/AssetPath.hpp"
 
 namespace {
-constexpr std::uint32_t kSpawnLocalGid = 1;
-constexpr std::uint32_t kGoalLocalGid = 2;
-constexpr std::uint32_t kDisappearLocalGid = 3;
-constexpr std::uint32_t kShooterLocalGidMin = 13;
-constexpr std::uint32_t kShooterLocalGidMax = 16;
+using json = nlohmann::json;
 
-constexpr float kBackgroundZ = -20.0F;
-constexpr float kRenderLayerZStep = 5.0F;
-constexpr std::size_t kSawAnimationIntervalMs = 80;
-constexpr std::size_t kBreakableAnimationIntervalMs = 70;
+constexpr const char *kTmxConfigPath = "config/tmx_mappings.json";
+
+struct TmxAnimationConfig {
+    std::vector<std::string> frames;
+    std::size_t intervalMs = 0;
+};
+
+struct TmxConfig {
+    std::string goalTexturePath = "images/bandagegirl.png";
+    glm::vec2 goalDefaultSize = {96.0F, 96.0F};
+
+    std::string stationaryLayerName = "stationary";
+    std::string breakableLayerName = "breakable";
+    std::string platformGroupName = "rectangle";
+    std::string sawGroupName = "saws";
+    std::string boundsGroupName = "bounds";
+
+    std::uint32_t spawnLocalGid = 1;
+    std::uint32_t goalLocalGid = 2;
+    std::uint32_t disappearLocalGid = 3;
+    std::uint32_t shooterLocalGidMin = 13;
+    std::uint32_t shooterLocalGidMax = 16;
+
+    float backgroundZ = -20.0F;
+    float renderLayerZStep = 5.0F;
+
+    TmxAnimationConfig sawAnimation{{
+        "images/buzzsaw2_1.png",
+        "images/buzzsaw2_2.png",
+        "images/buzzsaw2_3.png",
+    }, 80};
+
+    TmxAnimationConfig breakableAnimation{{
+        "images/disappearing_1.png",
+        "images/disappearing_2.png",
+        "images/disappearing_3.png",
+        "images/disappearing_4.png",
+        "images/disappearing_5.png",
+        "images/disappearing_6.png",
+        "images/disappearing_7.png",
+        "images/disappearing_8.png",
+        "images/disappearing_9.png",
+        "images/disappearing_10.png",
+        "images/disappearing_11.png",
+    }, 70};
+
+    glm::vec2 fallbackSpawnOffset = {80.0F, 80.0F};
+    float boundaryWallThickness = 50.0F;
+    float boundaryWallExtraHeight = 200.0F;
+};
+
+glm::vec2 ParseVec2(const json &value, const glm::vec2 &fallback) {
+    if (!value.is_array() || value.size() < 2) {
+        return fallback;
+    }
+    return {value[0].get<float>(), value[1].get<float>()};
+}
+
+std::vector<std::string> ParseStringList(const json &value,
+                                         const std::vector<std::string> &fallback) {
+    if (!value.is_array()) {
+        return fallback;
+    }
+
+    std::vector<std::string> result;
+    for (const auto &entry : value) {
+        if (entry.is_string()) {
+            result.push_back(entry.get<std::string>());
+        }
+    }
+    return result.empty() ? fallback : result;
+}
+
+TmxAnimationConfig ParseAnimationConfig(const json &value,
+                                        const TmxAnimationConfig &fallback) {
+    if (!value.is_object()) {
+        return fallback;
+    }
+
+    TmxAnimationConfig cfg = fallback;
+    cfg.frames = ParseStringList(value.value("frames", json::array()), fallback.frames);
+    cfg.intervalMs = value.value("intervalMs", fallback.intervalMs);
+    return cfg;
+}
+
+TmxConfig ParseTmxConfig(const json &root) {
+    TmxConfig cfg{};
+    if (!root.is_object()) {
+        return cfg;
+    }
+
+    if (root.contains("goal") && root["goal"].is_object()) {
+        const auto &goal = root["goal"];
+        cfg.goalTexturePath = goal.value("texturePath", cfg.goalTexturePath);
+        cfg.goalDefaultSize =
+            ParseVec2(goal.value("defaultSize", json::array()), cfg.goalDefaultSize);
+    }
+
+    cfg.stationaryLayerName = root.value("stationaryLayerName", cfg.stationaryLayerName);
+    cfg.breakableLayerName = root.value("breakableLayerName", cfg.breakableLayerName);
+    cfg.platformGroupName = root.value("platformGroupName", cfg.platformGroupName);
+    cfg.sawGroupName = root.value("sawGroupName", cfg.sawGroupName);
+    cfg.boundsGroupName = root.value("boundsGroupName", cfg.boundsGroupName);
+
+    if (root.contains("tiles") && root["tiles"].is_object()) {
+        const auto &tiles = root["tiles"];
+        cfg.spawnLocalGid = tiles.value("spawnLocalGid", cfg.spawnLocalGid);
+        cfg.goalLocalGid = tiles.value("goalLocalGid", cfg.goalLocalGid);
+        cfg.disappearLocalGid = tiles.value("disappearLocalGid", cfg.disappearLocalGid);
+        cfg.shooterLocalGidMin = tiles.value("shooterLocalGidMin", cfg.shooterLocalGidMin);
+        cfg.shooterLocalGidMax = tiles.value("shooterLocalGidMax", cfg.shooterLocalGidMax);
+    }
+
+    if (root.contains("zIndex") && root["zIndex"].is_object()) {
+        const auto &zIndex = root["zIndex"];
+        cfg.backgroundZ = zIndex.value("background", cfg.backgroundZ);
+        cfg.renderLayerZStep = zIndex.value("renderLayerStep", cfg.renderLayerZStep);
+    }
+
+    if (root.contains("animations") && root["animations"].is_object()) {
+        const auto &animations = root["animations"];
+        cfg.sawAnimation =
+            ParseAnimationConfig(animations.value("saw", json::object()), cfg.sawAnimation);
+        cfg.breakableAnimation = ParseAnimationConfig(
+            animations.value("breakable", json::object()), cfg.breakableAnimation);
+    }
+
+    cfg.fallbackSpawnOffset =
+        ParseVec2(root.value("fallbackSpawnOffset", json::array()), cfg.fallbackSpawnOffset);
+
+    if (root.contains("boundaryWalls") && root["boundaryWalls"].is_object()) {
+        const auto &walls = root["boundaryWalls"];
+        cfg.boundaryWallThickness = walls.value("thickness", cfg.boundaryWallThickness);
+        cfg.boundaryWallExtraHeight =
+            walls.value("extraHeight", cfg.boundaryWallExtraHeight);
+    }
+
+    return cfg;
+}
+
+const TmxConfig &GetTmxConfig() {
+    static TmxConfig config = []() {
+        TmxConfig cfg{};
+        const std::string resolvedPath = Common::ResolveAssetPath(kTmxConfigPath);
+        std::ifstream input(resolvedPath);
+        if (!input.is_open()) {
+            return cfg;
+        }
+
+        try {
+            json root;
+            input >> root;
+            cfg = ParseTmxConfig(root);
+        } catch (const std::exception &e) {
+            LOG_WARN("Failed to parse TMX config '{}': {}", resolvedPath, e.what());
+        }
+
+        return cfg;
+    }();
+
+    return config;
+}
 
 glm::vec2 TmxPixelCenterToWorld(const float centerX, const float centerY,
                                 const float mapPixelWidth,
@@ -142,7 +299,8 @@ glm::vec4 MakeUvRect(const tmx::Tileset &tileset, const std::uint32_t gid,
 }
 
 float RenderLayerOrderToZIndex(const std::size_t renderLayerOrder) {
-    return kBackgroundZ + static_cast<float>(renderLayerOrder) * kRenderLayerZStep;
+    const auto &cfg = GetTmxConfig();
+    return cfg.backgroundZ + static_cast<float>(renderLayerOrder) * cfg.renderLayerZStep;
 }
 
 Game::LevelObjectConfig MakeInvisibleCollider(const glm::vec2 &position,
@@ -159,10 +317,11 @@ Game::LevelObjectConfig MakeInvisibleCollider(const glm::vec2 &position,
 
 namespace Game {
 LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
+    const auto &cfg = GetTmxConfig();
     LevelConfig level{};
     level.mapPath = relativeMapPath;
-    level.goalTexturePath = "images/bandagegirl.png";
-    level.goalSize = {96.0F, 96.0F};
+    level.goalTexturePath = cfg.goalTexturePath;
+    level.goalSize = cfg.goalDefaultSize;
 
     const std::string resolvedMapPath = Common::ResolveAssetPath(relativeMapPath);
 
@@ -204,8 +363,8 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
     for (const auto &layerPtr : map.getLayers()) {
         if (layerPtr->getType() == tmx::Layer::Type::Tile) {
             const auto &layer = layerPtr->getLayerAs<tmx::TileLayer>();
-            const bool isStationaryLayer = layer.getName() == "stationary";
-            const bool isBreakableLayer = layer.getName() == "breakable";
+            const bool isStationaryLayer = layer.getName() == cfg.stationaryLayerName;
+            const bool isBreakableLayer = layer.getName() == cfg.breakableLayerName;
             if (!layer.getVisible()) {
                 continue;
             }
@@ -246,21 +405,11 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
                         static_cast<float>(mapTileSize.y),
                     };
                     breakable.zIndex = layerZ;
-                    breakable.texturePath = "images/disappearing_1.png";
-                    breakable.animationFrames = {
-                        "images/disappearing_1.png",
-                        "images/disappearing_2.png",
-                        "images/disappearing_3.png",
-                        "images/disappearing_4.png",
-                        "images/disappearing_5.png",
-                        "images/disappearing_6.png",
-                        "images/disappearing_7.png",
-                        "images/disappearing_8.png",
-                        "images/disappearing_9.png",
-                        "images/disappearing_10.png",
-                        "images/disappearing_11.png",
-                    };
-                    breakable.animationIntervalMs = kBreakableAnimationIntervalMs;
+                    if (!cfg.breakableAnimation.frames.empty()) {
+                        breakable.texturePath = cfg.breakableAnimation.frames.front();
+                    }
+                    breakable.animationFrames = cfg.breakableAnimation.frames;
+                    breakable.animationIntervalMs = cfg.breakableAnimation.intervalMs;
                     breakable.visible = true;
                     level.breakableBlocks.push_back(std::move(breakable));
                     continue;
@@ -269,12 +418,12 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
                 const auto localGid = decodeMyImagesLocal(tile.ID);
 
                 if (isStationaryLayer && localGid.has_value()) {
-                    if (localGid.value() == kSpawnLocalGid) {
+                    if (localGid.value() == cfg.spawnLocalGid) {
                         level.spawn = worldCenter;
                         spawnFound = true;
                         continue;
                     }
-                    if (localGid.value() == kGoalLocalGid) {
+                    if (localGid.value() == cfg.goalLocalGid) {
                         level.goalPosition = worldCenter;
                         level.goalSize = {
                             static_cast<float>(mapTileSize.x),
@@ -283,15 +432,15 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
                         goalFound = true;
                         continue;
                     }
-                    if (localGid.value() == kDisappearLocalGid) {
+                    if (localGid.value() == cfg.disappearLocalGid) {
                         level.platforms.push_back(MakeInvisibleCollider(
                             worldCenter,
                             {static_cast<float>(mapTileSize.x), static_cast<float>(mapTileSize.y)},
                             1.0F));
                         continue;
                     }
-                    if (localGid.value() >= kShooterLocalGidMin &&
-                        localGid.value() <= kShooterLocalGidMax) {
+                    if (localGid.value() >= cfg.shooterLocalGidMin &&
+                        localGid.value() <= cfg.shooterLocalGidMax) {
                         level.deathZones.push_back(MakeInvisibleCollider(
                             worldCenter,
                             {static_cast<float>(mapTileSize.x), static_cast<float>(mapTileSize.y)},
@@ -370,9 +519,9 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
         }
 
         const auto &objectGroup = layerPtr->getLayerAs<tmx::ObjectGroup>();
-        const bool isPlatformGroup = objectGroup.getName() == "rectangle";
-        const bool isSawGroup = objectGroup.getName() == "saws";
-        const bool isBoundsGroup = objectGroup.getName() == "bounds";
+        const bool isPlatformGroup = objectGroup.getName() == cfg.platformGroupName;
+        const bool isSawGroup = objectGroup.getName() == cfg.sawGroupName;
+        const bool isBoundsGroup = objectGroup.getName() == cfg.boundsGroupName;
         const auto layerOffset = layerPtr->getOffset();
 
         for (const auto &obj : objectGroup.getObjects()) {
@@ -402,14 +551,12 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
 
             if (isSawGroup || obj.getShape() == tmx::Object::Shape::Ellipse) {
                 auto saw = MakeInvisibleCollider(worldCenter, size, 3.0F);
-                saw.texturePath = "images/buzzsaw2_1.png";
+                if (!cfg.sawAnimation.frames.empty()) {
+                    saw.texturePath = cfg.sawAnimation.frames.front();
+                }
                 saw.visible = true;
-                saw.animationFrames = {
-                    "images/buzzsaw2_1.png",
-                    "images/buzzsaw2_2.png",
-                    "images/buzzsaw2_3.png",
-                };
-                saw.animationIntervalMs = kSawAnimationIntervalMs;
+                saw.animationFrames = cfg.sawAnimation.frames;
+                saw.animationIntervalMs = cfg.sawAnimation.intervalMs;
                 level.deathZones.push_back(std::move(saw));
                 continue;
             }
@@ -435,21 +582,24 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
     }
 
     if (!spawnFound) {
-        level.spawn = TmxPixelCenterToWorld(80.0F, mapPixelHeight - 80.0F,
+        level.spawn = TmxPixelCenterToWorld(cfg.fallbackSpawnOffset.x,
+                                            mapPixelHeight - cfg.fallbackSpawnOffset.y,
                                             mapPixelWidth, mapPixelHeight);
         LOG_WARN("TMX spawn marker not found in {}, using fallback spawn.",
                  resolvedMapPath);
     }
 
     if (!goalFound) {
-        level.goalPosition = TmxPixelCenterToWorld(mapPixelWidth - 80.0F, 80.0F,
+        level.goalPosition = TmxPixelCenterToWorld(
+            mapPixelWidth - cfg.fallbackSpawnOffset.x, cfg.fallbackSpawnOffset.y,
                                                    mapPixelWidth, mapPixelHeight);
         LOG_WARN("TMX goal marker not found in {}, using fallback goal.",
                  resolvedMapPath);
     }
 
-    const float boundaryWallThickness = 50.0F;
-    const float boundaryWallHeight = (level.worldBoundsMax.y - level.worldBoundsMin.y) + 200.0F;
+    const float boundaryWallThickness = cfg.boundaryWallThickness;
+    const float boundaryWallHeight =
+        (level.worldBoundsMax.y - level.worldBoundsMin.y) + cfg.boundaryWallExtraHeight;
     const float boundaryWallCenterY = (level.worldBoundsMin.y + level.worldBoundsMax.y) * 0.5F;
 
     LevelObjectConfig leftWall{};

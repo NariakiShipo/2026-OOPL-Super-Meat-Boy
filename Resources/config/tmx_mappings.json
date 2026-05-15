@@ -1,0 +1,53 @@
+{
+  "goal": {
+    "texturePath": "images/bandagegirl.png",
+    "defaultSize": [96.0, 96.0]
+  },
+  "stationaryLayerName": "stationary",
+  "breakableLayerName": "breakable",
+  "platformGroupName": "rectangle",
+  "sawGroupName": "saws",
+  "boundsGroupName": "bounds",
+  "tiles": {
+    "spawnLocalGid": 1,
+    "goalLocalGid": 2,
+    "disappearLocalGid": 3,
+    "shooterLocalGidMin": 13,
+    "shooterLocalGidMax": 16
+  },
+  "zIndex": {
+    "background": -20.0,
+    "renderLayerStep": 5.0
+  },
+  "animations": {
+    "saw": {
+      "frames": [
+        "images/buzzsaw2_1.png",
+        "images/buzzsaw2_2.png",
+        "images/buzzsaw2_3.png"
+      ],
+      "intervalMs": 80
+    },
+    "breakable": {
+      "frames": [
+        "images/disappearing_1.png",
+        "images/disappearing_2.png",
+        "images/disappearing_3.png",
+        "images/disappearing_4.png",
+        "images/disappearing_5.png",
+        "images/disappearing_6.png",
+        "images/disappearing_7.png",
+        "images/disappearing_8.png",
+        "images/disappearing_9.png",
+        "images/disappearing_10.png",
+        "images/disappearing_11.png"
+      ],
+      "intervalMs": 70
+    }
+  },
+  "fallbackSpawnOffset": [80.0, 80.0],
+  "boundaryWalls": {
+    "thickness": 50.0,
+    "extraHeight": 200.0
+  }
+}

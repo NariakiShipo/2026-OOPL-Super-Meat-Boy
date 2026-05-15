@@ -1,0 +1,126 @@
+{
+  "tmxLevels": [
+    "images/forest1.tmx",
+    "images/forest2.tmx",
+    "images/forest3.tmx",
+    "images/forest4.tmx",
+    "images/forest5.tmx",
+    "images/forest6.tmx",
+    "images/forest7.tmx",
+    "images/forest8.tmx"
+  ],
+  "fallbackLevels": [
+    {
+      "mapPixelSize": [1400.0, 900.0],
+      "worldBoundsMin": [-700.0, -450.0],
+      "worldBoundsMax": [700.0, 450.0],
+      "spawn": [-520.0, -40.0],
+      "goalPosition": [470.0, 120.0],
+      "goalSize": [30.0, 30.0],
+      "goalTexturePath": "images/bandagegirl.png",
+      "platforms": [
+        {
+          "position": [0.0, -320.0],
+          "size": [1300.0, 70.0],
+          "zIndex": 1.0,
+          "texturePath": "images/disappearing.png",
+          "uvRect": [0.0, 0.0, 1.0, 1.0],
+          "visible": true,
+          "animationFrames": [],
+          "animationIntervalMs": 0
+        },
+        {
+          "position": [-220.0, -120.0],
+          "size": [280.0, 50.0],
+          "zIndex": 2.0,
+          "texturePath": "images/sawshooter.png",
+          "uvRect": [0.0, 0.0, 1.0, 1.0],
+          "visible": true,
+          "animationFrames": [],
+          "animationIntervalMs": 0
+        },
+        {
+          "position": [220.0, 20.0],
+          "size": [280.0, 50.0],
+          "zIndex": 2.0,
+          "texturePath": "images/sawshooter.png",
+          "uvRect": [0.0, 0.0, 1.0, 1.0],
+          "visible": true,
+          "animationFrames": [],
+          "animationIntervalMs": 0
+        },
+        {
+          "position": [-800.0, -120.0],
+          "size": [280.0, 500.0],
+          "zIndex": 2.0,
+          "texturePath": "images/sawshooter.png",
+          "uvRect": [0.0, 0.0, 1.0, 1.0],
+          "visible": true,
+          "animationFrames": [],
+          "animationIntervalMs": 0
+        }
+      ]
+    },
+    {
+      "mapPixelSize": [1600.0, 1000.0],
+      "worldBoundsMin": [-800.0, -500.0],
+      "worldBoundsMax": [800.0, 500.0],
+      "spawn": [-580.0, -220.0],
+      "goalPosition": [560.0, 240.0],
+      "goalSize": [30.0, 30.0],
+      "goalTexturePath": "images/bandagegirl.png",
+      "platforms": [
+        {
+          "position": [0.0, -340.0],
+          "size": [1400.0, 60.0],
+          "zIndex": 1.0,
+          "texturePath": "images/disappearing.png",
+          "uvRect": [0.0, 0.0, 1.0, 1.0],
+          "visible": true,
+          "animationFrames": [],
+          "animationIntervalMs": 0
+        },
+        {
+          "position": [-350.0, -120.0],
+          "size": [220.0, 45.0],
+          "zIndex": 2.0,
+          "texturePath": "images/sawshooter.png",
+          "uvRect": [0.0, 0.0, 1.0, 1.0],
+          "visible": true,
+          "animationFrames": [],
+          "animationIntervalMs": 0
+        },
+        {
+          "position": [-80.0, 20.0],
+          "size": [220.0, 45.0],
+          "zIndex": 2.0,
+          "texturePath": "images/sawshooter.png",
+          "uvRect": [0.0, 0.0, 1.0, 1.0],
+          "visible": true,
+          "animationFrames": [],
+          "animationIntervalMs": 0
+        },
+        {
+          "position": [180.0, 140.0],
+          "size": [220.0, 45.0],
+          "zIndex": 2.0,
+          "texturePath": "images/sawshooter.png",
+          "uvRect": [0.0, 0.0, 1.0, 1.0],
+          "visible": true,
+          "animationFrames": [],
+          "animationIntervalMs": 0
+        },
+        {
+          "position": [430.0, 240.0],
+          "size": [220.0, 45.0],
+          "zIndex": 2.0,
+          "texturePath": "images/sawshooter.png",
+          "uvRect": [0.0, 0.0, 1.0, 1.0],
+          "visible": true,
+          "animationFrames": [],
+          "animationIntervalMs": 0
+        }
+      ]
+    }
+  ]
+}
