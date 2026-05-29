@@ -32,6 +32,7 @@ public:
     enum class State {
         START,
         TITLE,
+        LEVEL_SELECT,
         UPDATE,
         END,
     };
@@ -41,6 +42,8 @@ public:
     void Start();
 
     void Title();
+
+    void LevelSelect();
 
     void Update();
 
@@ -52,10 +55,12 @@ private:
     void LoadLevel(std::size_t levelIndex);
     void ShowTitleScreen();
     void ShowGameplayScreen();
+    void ShowLevelSelectScreen();
     void OpenSettingsMenu();
     void CloseSettingsMenu();
     void StartGame();
     void UpdateTitleScreen();
+    void UpdateLevelSelectScreen();
     void UpdateSettingsMenu();
     void LoadAudioSettings();
     void SaveAudioSettings() const;
@@ -156,6 +161,14 @@ private:
             210.0F,
             Util::Color(220, 220, 220, 255),
         };
+        UiTextSpec toLevelSelectButton{
+            "fonts/Inter.ttf",
+            32,
+            "back to level select",
+            {0.0F, -340.0F},
+            210.0F,
+            Util::Color(255, 200, 200, 255),
+        };
         UiTextSpec statusText{
             "fonts/Inter.ttf",
             32,
@@ -249,6 +262,7 @@ private:
     std::shared_ptr<Util::GameObject> m_SfxSettingText;
     std::shared_ptr<Util::GameObject> m_SettingsBackButton;
     std::shared_ptr<Util::GameObject> m_SettingsHelpText;
+    std::shared_ptr<Util::GameObject> m_SettingsToLevelSelectButton;
 
     std::vector<std::shared_ptr<Util::GameObject>> m_TitleScreenObjects;
     std::vector<std::shared_ptr<Util::GameObject>> m_SettingsObjects;
@@ -272,8 +286,19 @@ private:
     std::shared_ptr<Util::GameObject> m_StatusBoard;
     std::shared_ptr<Util::Text> m_StatusText;
 
+    std::vector<Game::WorldData> m_Worlds;
     std::vector<Game::LevelConfig> m_Levels;
     std::size_t m_CurrentLevelIndex = 0;
+
+    // 關卡選擇畫面
+    std::size_t m_LevelSelectWorldIndex = 0;
+    std::shared_ptr<Util::GameObject> m_LevelSelectBackground;
+    std::vector<std::shared_ptr<Util::GameObject>> m_WorldTabButtons;
+    std::vector<std::shared_ptr<Util::GameObject>> m_LevelSelectButtons;
+    std::vector<std::shared_ptr<Util::GameObject>> m_LevelHoverOverlays;
+    std::shared_ptr<Util::GameObject> m_LevelSelectBackButton;
+    std::shared_ptr<Util::GameObject> m_LevelSelectTitle;
+    std::vector<std::shared_ptr<Util::GameObject>> m_LevelSelectObjects;
 
     GameplayConfig m_Config;
 

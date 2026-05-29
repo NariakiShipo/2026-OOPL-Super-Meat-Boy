@@ -114,6 +114,13 @@ Game::LevelConfig ParseLevelConfig(const json &value) {
     return cfg;
 }
 
+Game::WorldCategory ParseWorldCategory(const std::string &name) {
+    if (name == "Factory") {
+        return Game::WorldCategory::Factory;
+    }
+    return Game::WorldCategory::Forest;
+}
+
 std::vector<Game::LevelConfig> ParseFallbackLevels(const json &root) {
     std::vector<Game::LevelConfig> levels;
     if (!root.contains("fallbackLevels") || !root["fallbackLevels"].is_array()) {
@@ -143,36 +150,130 @@ std::vector<std::string> ParseTmxLevels(const json &root) {
 } // namespace
 
 namespace Game {
-std::vector<LevelConfig> BuildDefaultLevels() {
-    std::vector<LevelConfig> levels;
-    levels.reserve(8);
+
+std::vector<WorldData> BuildWorldData() {
+    std::vector<WorldData> worlds;
 
     json configRoot;
-    if (ReadJsonConfig(kLevelsConfigPath, &configRoot)) {
-        const auto tmxPaths = ParseTmxLevels(configRoot);
-        if (!tmxPaths.empty()) {
-            bool allLoaded = true;
-            try {
-                for (const auto &path : tmxPaths) {
-                    levels.push_back(LoadLevelFromTmx(path));
-                }
-            } catch (const std::exception &e) {
-                LOG_ERROR("Failed to build TMX levels from JSON: {}", e.what());
-                allLoaded = false;
-                levels.clear();
+    if (!ReadJsonConfig(kLevelsConfigPath, &configRoot)) {
+        // 無 config：回退到預設 forest 世界
+        WorldData forestWorld;
+        forestWorld.category = WorldCategory::Forest;
+        forestWorld.name = "Forest";
+        forestWorld.bgImagePath = "images/forestlevelselect.png";
+
+        try {
+            const std::vector<std::string> forestPaths = {
+                "images/forest1.tmx", "images/forest2.tmx",
+                "images/forest3.tmx", "images/forest4.tmx",
+                "images/forest5.tmx", "images/forest6.tmx",
+                "images/forest7.tmx", "images/forest8.tmx",
+            };
+            for (int i = 0; i < static_cast<int>(forestPaths.size()); ++i) {
+                auto level = LoadLevelFromTmx(forestPaths[i]);
+                level.worldInfo = {WorldCategory::Forest, "Forest",
+                                   forestWorld.bgImagePath, i};
+                forestWorld.levels.push_back(std::move(level));
+            }
+        } catch (const std::exception &e) {
+            LOG_ERROR("Failed to build default forest levels: {}", e.what());
+        }
+
+        if (!forestWorld.levels.empty()) {
+            worlds.push_back(std::move(forestWorld));
+        }
+        return worlds;
+    }
+
+    // 解析新格式：worlds 陣列
+    if (configRoot.contains("worlds") && configRoot["worlds"].is_array()) {
+        for (const auto &worldJson : configRoot["worlds"]) {
+            if (!worldJson.is_object()) {
+                continue;
             }
 
-            if (allLoaded && !levels.empty()) {
-                return levels;
+            WorldData world;
+            world.name = worldJson.value("name", std::string("Unknown"));
+            world.bgImagePath = worldJson.value("bgImage", std::string(""));
+            world.category = ParseWorldCategory(world.name);
+
+            const auto tmxPaths = ParseTmxLevels(worldJson);
+            bool loadOk = true;
+            try {
+                for (int i = 0; i < static_cast<int>(tmxPaths.size()); ++i) {
+                    auto level = LoadLevelFromTmx(tmxPaths[i]);
+                    level.worldInfo = {world.category, world.name,
+                                       world.bgImagePath, i};
+                    world.levels.push_back(std::move(level));
+                }
+            } catch (const std::exception &e) {
+                LOG_ERROR("Failed to load TMX for world '{}': {}", world.name, e.what());
+                loadOk = false;
+            }
+
+            if (loadOk && !world.levels.empty()) {
+                worlds.push_back(std::move(world));
             }
         }
 
-        const auto fallbackLevels = ParseFallbackLevels(configRoot);
-        if (!fallbackLevels.empty()) {
-            return fallbackLevels;
+        if (!worlds.empty()) {
+            return worlds;
         }
     }
 
+    // 舊格式回退：直接讀 tmxLevels（向後相容）
+    const auto tmxPaths = ParseTmxLevels(configRoot);
+    if (!tmxPaths.empty()) {
+        WorldData forestWorld;
+        forestWorld.category = WorldCategory::Forest;
+        forestWorld.name = "Forest";
+        forestWorld.bgImagePath = "images/forestlevelselect.png";
+
+        try {
+            for (int i = 0; i < static_cast<int>(tmxPaths.size()); ++i) {
+                auto level = LoadLevelFromTmx(tmxPaths[i]);
+                level.worldInfo = {WorldCategory::Forest, "Forest",
+                                   forestWorld.bgImagePath, i};
+                forestWorld.levels.push_back(std::move(level));
+            }
+        } catch (const std::exception &e) {
+            LOG_ERROR("Failed to build TMX levels: {}", e.what());
+        }
+
+        if (!forestWorld.levels.empty()) {
+            worlds.push_back(std::move(forestWorld));
+            return worlds;
+        }
+    }
+
+    // 最終回退：hardcoded fallback levels
+    const auto fallbackLevels = ParseFallbackLevels(configRoot);
+    if (!fallbackLevels.empty()) {
+        WorldData fallbackWorld;
+        fallbackWorld.category = WorldCategory::Forest;
+        fallbackWorld.name = "Forest";
+        fallbackWorld.bgImagePath = "images/forestlevelselect.png";
+        fallbackWorld.levels = fallbackLevels;
+        worlds.push_back(std::move(fallbackWorld));
+    }
+
+    return worlds;
+}
+
+std::vector<LevelConfig> BuildDefaultLevels() {
+    const auto worlds = BuildWorldData();
+    std::vector<LevelConfig> all;
+    for (const auto &world : worlds) {
+        for (const auto &level : world.levels) {
+            all.push_back(level);
+        }
+    }
+    if (!all.empty()) {
+        return all;
+    }
+
+    // 最終 hardcoded fallback
+    std::vector<LevelConfig> levels;
     try {
         levels.push_back(LoadLevelFromTmx("images/forest1.tmx"));
         levels.push_back(LoadLevelFromTmx("images/forest2.tmx"));
@@ -208,27 +309,6 @@ std::vector<LevelConfig> BuildDefaultLevels() {
             {0.0F, 0.0F, 1.0F, 1.0F}, true, {}, 0},
     };
 
-    LevelConfig fallback2;
-    fallback2.mapPixelSize = {1600.0F, 1000.0F};
-    fallback2.worldBoundsMin = {-800.0F, -500.0F};
-    fallback2.worldBoundsMax = {800.0F, 500.0F};
-    fallback2.spawn = {-580.0F, -220.0F};
-    fallback2.goalPosition = {560.0F, 240.0F};
-    fallback2.goalSize = {30.0F, 30.0F};
-    fallback2.goalTexturePath = "images/bandagegirl.png";
-    fallback2.platforms = {
-        Obj{{0.0F, -340.0F}, {1400.0F, 60.0F}, 1.0F, "images/disappearing.png",
-            {0.0F, 0.0F, 1.0F, 1.0F}, true, {}, 0},
-        Obj{{-350.0F, -120.0F}, {220.0F, 45.0F}, 2.0F, "images/sawshooter.png",
-            {0.0F, 0.0F, 1.0F, 1.0F}, true, {}, 0},
-        Obj{{-80.0F, 20.0F}, {220.0F, 45.0F}, 2.0F, "images/sawshooter.png",
-            {0.0F, 0.0F, 1.0F, 1.0F}, true, {}, 0},
-        Obj{{180.0F, 140.0F}, {220.0F, 45.0F}, 2.0F, "images/sawshooter.png",
-            {0.0F, 0.0F, 1.0F, 1.0F}, true, {}, 0},
-        Obj{{430.0F, 240.0F}, {220.0F, 45.0F}, 2.0F, "images/sawshooter.png",
-            {0.0F, 0.0F, 1.0F, 1.0F}, true, {}, 0},
-    };
-
-    return {fallback1, fallback2};
+    return {fallback1};
 }
 } // namespace Game

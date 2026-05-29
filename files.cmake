@@ -2,6 +2,7 @@ set(SRC_FILES
     AppConfig.cpp
     AppStart.cpp
     AppMenu.cpp
+    AppLevelSelect.cpp
     AppPlayer.cpp
     AppCollision.cpp
     AppMovement.cpp

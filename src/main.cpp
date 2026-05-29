@@ -16,6 +16,10 @@ int main(int, char**) {
                 app.Title();
                 break;
 
+            case App::State::LEVEL_SELECT:
+                app.LevelSelect();
+                break;
+
             case App::State::UPDATE:
                 app.Update();
                 break;

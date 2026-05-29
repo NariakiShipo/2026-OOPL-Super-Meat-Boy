@@ -8,6 +8,16 @@
 #include <vector>
 
 namespace Game {
+
+enum class WorldCategory { Forest, Factory };
+
+struct WorldInfo {
+    WorldCategory category = WorldCategory::Forest;
+    std::string name;           // "Forest" / "Factory"
+    std::string bgImagePath;    // 關卡選擇背景圖路徑
+    int levelIndexInWorld = 0;  // 此關在本 world 的第幾關（0-based）
+};
+
 struct LevelObjectConfig {
     glm::vec2 position;
     glm::vec2 size;
@@ -32,8 +42,17 @@ struct LevelConfig {
     std::vector<LevelObjectConfig> platforms;
     std::vector<LevelObjectConfig> breakableBlocks;
     std::vector<LevelObjectConfig> deathZones;
+    WorldInfo worldInfo;
 };
 
+struct WorldData {
+    WorldCategory category;
+    std::string name;
+    std::string bgImagePath;
+    std::vector<LevelConfig> levels;
+};
+
+std::vector<WorldData> BuildWorldData();
 std::vector<LevelConfig> BuildDefaultLevels();
 } // namespace Game
 

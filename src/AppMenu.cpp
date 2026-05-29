@@ -9,6 +9,7 @@
 #include "Util/Input.hpp"
 #include "Util/SFX.hpp"
 #include "Util/Text.hpp"
+#include "Util/TransformUtils.hpp"
 
 #include "game/Collision.hpp"
 
@@ -21,13 +22,21 @@ std::shared_ptr<Util::Text> GetTextDrawable(
     return std::dynamic_pointer_cast<Util::Text>(object->GetDrawable());
 }
 
+// 對高 zIndex UI 物件（對映至螢幕空間）的碰撞體：
+// 渲染時 UI 位置 = translation - cameraPosition，滨鼠也是螢幕坐標，所以需要一致
+static Game::Aabb GetUiAabb(const std::shared_ptr<Util::GameObject> &object) {
+    const glm::vec2 camPos = Util::GetCameraPosition();
+    const glm::vec2 screenPos = object->m_Transform.translation - camPos;
+    return Game::MakeAabb(screenPos, object->GetScaledSize());
+}
+
 bool IsCursorOver(const std::shared_ptr<Util::GameObject> &object) {
     if (object == nullptr || object->GetDrawable() == nullptr) {
         return false;
     }
 
     const auto cursor = Util::Input::GetCursorPosition();
-    const Game::Aabb bounds = Game::GetAabb(object);
+    const Game::Aabb bounds = GetUiAabb(object);
     return cursor.x >= bounds.minX && cursor.x <= bounds.maxX &&
            cursor.y >= bounds.minY && cursor.y <= bounds.maxY;
 }
@@ -203,6 +212,11 @@ void App::OpenSettingsMenu() {
             m_SettingsButton->SetVisible(false);
         }
     }
+    // 只在遊戲中（UPDATE state）才顯示「返回關卡選擇」按鈕
+    if (m_SettingsToLevelSelectButton != nullptr) {
+        m_SettingsToLevelSelectButton->SetVisible(
+            m_CurrentState == State::UPDATE);
+    }
     RefreshSettingsText();
     if (m_ButtonSFX != nullptr) {
         m_ButtonSFX->Play();
@@ -232,8 +246,9 @@ void App::StartGame() {
     }
 
     m_SettingsMenuVisible = false;
-    LoadLevel(m_CurrentLevelIndex);
-    m_CurrentState = State::UPDATE;
+    m_LevelSelectWorldIndex = 0;
+    ShowLevelSelectScreen();
+    m_CurrentState = State::LEVEL_SELECT;
 }
 
 void App::UpdateTitleScreen() {
@@ -269,11 +284,15 @@ void App::UpdateTitleScreen() {
 }
 
 void App::UpdateSettingsMenu() {
-    const auto cursor = Util::Input::GetCursorPosition();
-
     const auto bgmText = GetTextDrawable(m_BgmSettingText);
     if (bgmText != nullptr) {
-        const auto bgmBounds = Game::GetAabb(m_BgmSettingText);
+        // 音量條碰撞也需要螢幕坐標（減去相機位移）
+        const glm::vec2 camPos = Util::GetCameraPosition();
+        const glm::vec2 bgmScreenPos =
+            m_BgmSettingText->m_Transform.translation - camPos;
+        const Game::Aabb bgmBounds =
+            Game::MakeAabb(bgmScreenPos, m_BgmSettingText->GetScaledSize());
+        const auto cursor = Util::Input::GetCursorPosition();
         if (Util::Input::IsKeyPressed(Util::Keycode::MOUSE_LB) &&
             cursor.x >= bgmBounds.minX && cursor.x <= bgmBounds.maxX &&
             cursor.y >= bgmBounds.minY && cursor.y <= bgmBounds.maxY) {
@@ -290,7 +309,13 @@ void App::UpdateSettingsMenu() {
 
     const auto sfxText = GetTextDrawable(m_SfxSettingText);
     if (sfxText != nullptr) {
-        const auto sfxBounds = Game::GetAabb(m_SfxSettingText);
+        // 音量條碰撞也需要螢幕坐標（減去相機位移）
+        const glm::vec2 camPos = Util::GetCameraPosition();
+        const glm::vec2 sfxScreenPos =
+            m_SfxSettingText->m_Transform.translation - camPos;
+        const Game::Aabb sfxBounds =
+            Game::MakeAabb(sfxScreenPos, m_SfxSettingText->GetScaledSize());
+        const auto cursor = Util::Input::GetCursorPosition();
         if (Util::Input::IsKeyPressed(Util::Keycode::MOUSE_LB) &&
             cursor.x >= sfxBounds.minX && cursor.x <= sfxBounds.maxX &&
             cursor.y >= sfxBounds.minY && cursor.y <= sfxBounds.maxY) {
@@ -312,11 +337,32 @@ void App::UpdateSettingsMenu() {
     if (IsCursorOver(m_SettingsBackButton) &&
         Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB)) {
         CloseSettingsMenu();
+        return;
+    }
+
+    // 「返回關卡選擇」按鈕：只在遊戲中（UPDATE state）顯示
+    if (m_CurrentState == State::UPDATE &&
+        m_SettingsToLevelSelectButton != nullptr) {
+        SetButtonColor(m_SettingsToLevelSelectButton,
+                       IsCursorOver(m_SettingsToLevelSelectButton)
+                           ? m_Config.ui.buttonHoverColor
+                           : Util::Color(255, 200, 200, 255));
+
+        if (IsCursorOver(m_SettingsToLevelSelectButton) &&
+            Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB)) {
+            CloseSettingsMenu();
+            m_LevelSelectWorldIndex = 0;
+            ShowLevelSelectScreen();
+            m_CurrentState = State::LEVEL_SELECT;
+            return;
+        }
     }
 }
 
 void App::Title() {
-    if (m_SettingsMenuVisible && Util::Input::IsKeyDown(Util::Keycode::F1)) {
+    if (m_SettingsMenuVisible &&
+        (Util::Input::IsKeyDown(Util::Keycode::F1) ||
+         Util::Input::IsKeyDown(Util::Keycode::ESCAPE))) {
         CloseSettingsMenu();
     }
 

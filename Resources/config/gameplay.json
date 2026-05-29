@@ -85,20 +85,20 @@
     "idleSpritePath": "images/meatboystanding.png",
     "runLeftSpritePath": "images/sprintLeft.png",
     "runRightSpritePath": "images/sprintRight.png",
-    "scale": 0.8,
+    "scale": 0.7,
     "zIndex": 10.0,
     "movement": {
-      "moveSpeed": 360.0,
+      "moveSpeed": 300.0,
       "sprintMultiplier": 1.8,
       "jumpVelocity": 500.0,
       "jumpHoldMaxMs": 170.0,
       "jumpHoldBoost": 2000.0,
       "shortHopCutRatio": 0.42,
       "wallJumpHorizontalVelocity": 430.0,
-      "wallJumpControlLockMs": 140.0,
+      "wallJumpControlLockMs": 300.0,
       "wallReattachCooldownMs": 110.0,
-      "wallSlideMaxFallSpeed": 260.0,
-      "gravity": -1800.0
+      "wallSlideMaxFallSpeed": 200.0,
+      "gravity": -1500.0
     },
     "animation": {
       "airborneThreshold": 20.0,

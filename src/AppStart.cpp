@@ -197,6 +197,14 @@ void App::InitWorld() {
         m_Config.ui.helpText.zIndex,
         m_Config.ui.helpText.color);
 
+    m_SettingsToLevelSelectButton = CreateTextObject(
+        Common::ResolveAssetPath(m_Config.ui.toLevelSelectButton.fontPath),
+        m_Config.ui.toLevelSelectButton.fontSize,
+        m_Config.ui.toLevelSelectButton.text,
+        m_Config.ui.toLevelSelectButton.position,
+        m_Config.ui.toLevelSelectButton.zIndex,
+        m_Config.ui.toLevelSelectButton.color);
+
     m_TitleScreenObjects = {
         m_TitleBackground,
         m_StartButton,
@@ -209,6 +217,7 @@ void App::InitWorld() {
         m_SfxSettingText,
         m_SettingsBackButton,
         m_SettingsHelpText,
+        m_SettingsToLevelSelectButton,
     };
 
     m_TitleBGM = std::make_shared<Util::BGM>(
@@ -221,8 +230,10 @@ void App::InitWorld() {
     ApplyAudioSettings();
     m_TitleBGM->Play(-1);
 
+    m_Worlds = Game::BuildWorldData();
     m_Levels = Game::BuildDefaultLevels();
     m_CurrentLevelIndex = 0;
+    m_LevelSelectWorldIndex = 0;
     ShowTitleScreen();
 }
 

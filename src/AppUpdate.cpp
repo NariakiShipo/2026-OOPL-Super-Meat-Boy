@@ -5,13 +5,16 @@
 void App::Update() {
     bool shouldUpdateGameplay = true;
 
-    if (m_SettingsMenuVisible && Util::Input::IsKeyDown(Util::Keycode::F1)) {
+    if (m_SettingsMenuVisible &&
+        (Util::Input::IsKeyDown(Util::Keycode::F1) ||
+         Util::Input::IsKeyDown(Util::Keycode::ESCAPE))) {
         CloseSettingsMenu();
         shouldUpdateGameplay = false;
     } else if (m_SettingsMenuVisible) {
         UpdateSettingsMenu();
         shouldUpdateGameplay = false;
-    } else if (Util::Input::IsKeyDown(Util::Keycode::F1)) {
+    } else if (Util::Input::IsKeyDown(Util::Keycode::F1) ||
+               Util::Input::IsKeyDown(Util::Keycode::ESCAPE)) {
         OpenSettingsMenu();
         shouldUpdateGameplay = false;
     } else if (m_LevelCleared) {
@@ -28,14 +31,12 @@ void App::Update() {
     if (shouldUpdateGameplay) {
         UpdateBreakableBlocks();
     }
-    
+
     /*
      * Do not touch the code below as they serve the purpose for
      * closing the window.
      */
-    if (!m_SettingsMenuVisible &&
-        (Util::Input::IsKeyUp(Util::Keycode::ESCAPE) ||
-         Util::Input::IfExit())) {
+    if (Util::Input::IfExit()) {
         m_CurrentState = State::END;
     }
 }
