@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="575" height="25" tilewidth="20" tileheight="20" infinite="0" nextlayerid="10" nextobjectid="200">
+ <tileset firstgid="1" name="myimages" tilewidth="20" tileheight="20" tilecount="16" columns="16">
+  <image source="myimages.png" width="320" height="20"/>
+ </tileset>
+ <imagelayer id="1" name="bg_left" offsetx="0" offsety="0">
+  <image source="forestboss_bg1.png" width="5750" height="500"/>
+ </imagelayer>
+ <imagelayer id="2" name="bg_right" offsetx="5750" offsety="0">
+  <image source="forestboss_bg2.png" width="5750" height="500"/>
+ </imagelayer>
+ <objectgroup id="3" name="rectangle">
+  <object id="1" x="0" y="430" width="5300" height="70"/>
+  <object id="2" x="5480" y="430" width="5070" height="70"/>
+  <object id="3" x="10550" y="380" width="950" height="70"/>
+  <object id="4" x="7450" y="380" width="200" height="50"/>
+  <object id="5" x="8530" y="330" width="40" height="100"/>
+  <object id="6" x="8930" y="330" width="40" height="100"/>
+  <object id="7" x="8530" y="300" width="440" height="30"/>
+  <object id="8" x="2750" y="0" width="1100" height="290"/>
+  <object id="9" x="4250" y="0" width="600" height="275"/>
+  <object id="10" x="4970" y="330" width="160" height="100"/>
+  <object id="11" x="5990" y="250" width="280" height="45"/>
+ </objectgroup>
+ <objectgroup id="4" name="saws">
+  <object id="12" x="1425" y="380" width="50" height="50"><ellipse/></object>
+  <object id="13" x="1925" y="380" width="50" height="50"><ellipse/></object>
+  <object id="14" x="2425" y="380" width="50" height="50"><ellipse/></object>
+  <object id="15" x="3125" y="380" width="50" height="50"><ellipse/></object>
+  <object id="16" x="3710" y="285" width="80" height="80"><ellipse/></object>
+  <object id="17" x="6425" y="380" width="50" height="50"><ellipse/></object>
+  <object id="18" x="7025" y="380" width="50" height="50"><ellipse/></object>
+  <object id="19" x="7925" y="380" width="50" height="50"><ellipse/></object>
+ </objectgroup>
+ <objectgroup id="6" name="rotors">
+  <object id="20" x="6030" y="305" width="180" height="70" rotation="0"><ellipse/></object>
+  <object id="21" name="single" x="4470" y="225" width="160" height="100" rotation="270"><ellipse/></object>
+  <object id="22" name="single" x="5005" y="300" width="90" height="60" rotation="160"><ellipse/></object>
+  <object id="23" name="single" x="7510" y="355" width="80" height="50" rotation="90"><ellipse/></object>
+  <object id="24" name="single" x="8715" y="355" width="70" height="50" rotation="225"><ellipse/></object>
+ </objectgroup>
+ <objectgroup id="5" name="markers">
+  <object id="25" name="spawn" x="836" y="396" width="28" height="28"/>
+  <object id="26" name="goal" x="11135" y="332" width="30" height="45"/>
+  <object id="27" name="bossSpawn" x="445" y="325" width="10" height="10"/>
+  <object id="28" name="bossRushTrigger" x="10545" y="355" width="10" height="10"/>
+  <object id="29" name="bossCrash" x="10376" y="325" width="10" height="10"/>
+ </objectgroup>
+</map>

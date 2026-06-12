@@ -140,7 +140,8 @@ void App::ShowLevelSelectScreen() {
   m_WorldTabButtons.clear();
   m_LevelSelectButtons.clear();
 
-  const std::string fontPath = Common::ResolveAssetPath("fonts/Inter.ttf");
+  const std::string fontPath =
+      Common::ResolveAssetPath(m_Config.levelSelect.fontPath);
 
   // ── 背景圖（全屏縮放）────────────────────────────────────
   {
@@ -175,7 +176,8 @@ void App::ShowLevelSelectScreen() {
     const Util::Color tabColor = isActive ? Util::Color(255, 244, 100, 255)
                                           : Util::Color(200, 200, 200, 255);
 
-    auto tab = MakeTextButton(fontPath, 36, m_Worlds[wi].name, {tabX, kTabY},
+    auto tab = MakeTextButton(fontPath, m_Config.levelSelect.tabFontSize,
+                              m_Worlds[wi].name, {tabX, kTabY},
                               kTabZ, tabColor);
     m_WorldTabButtons.push_back(tab);
     m_LevelSelectObjects.push_back(tab);
@@ -205,9 +207,23 @@ void App::ShowLevelSelectScreen() {
     m_LevelSelectButtons.push_back(btn);
   }
 
+  // ── BOSS 按鈕（Forest 第 9 格；只在 Forest 分頁顯示）────────
+  m_LevelSelectBossButton = nullptr;
+  if (!m_Worlds.empty() &&
+      m_Worlds[m_LevelSelectWorldIndex].category ==
+          Game::WorldCategory::Forest &&
+      m_BossTestLevelIndex < m_Levels.size()) {
+    m_LevelSelectBossButton =
+        MakeTextButton(fontPath, m_Config.levelSelect.bossFontSize,
+                       "BOSS", {480.0F, -240.0F}, kBtnZ,
+                       Util::Color(255, 130, 110, 255));
+    m_LevelSelectObjects.push_back(m_LevelSelectBossButton);
+  }
+
   // ── Back 按鈕 ────────────────────────────────────────────
   m_LevelSelectBackButton =
-      MakeTextButton(fontPath, 32, "back", {0.0F, kBackButtonY}, kBackZ,
+      MakeTextButton(fontPath, m_Config.levelSelect.backFontSize,
+                     "back", {0.0F, kBackButtonY}, kBackZ,
                      Util::Color(255, 255, 255, 255));
   m_LevelSelectObjects.push_back(m_LevelSelectBackButton);
 
@@ -219,6 +235,14 @@ void App::ShowLevelSelectScreen() {
 
 // ── UpdateLevelSelectScreen ───────────────────────────────────
 void App::UpdateLevelSelectScreen() {
+  // 除錯入口（步驟1）：按 B 直接進 Boss 測試關；之後改為 Forest 第 9 格按鈕
+  if (Util::Input::IsKeyDown(Util::Keycode::B) &&
+      m_BossTestLevelIndex < m_Levels.size()) {
+    LoadLevel(m_BossTestLevelIndex);
+    m_CurrentState = State::UPDATE;
+    return;
+  }
+
   const Util::Color defaultColor(255, 255, 255, 255);
   const Util::Color hoverColor(255, 244, 100, 255);
   const Util::Color activeTabColor(255, 244, 100, 255);
@@ -267,6 +291,19 @@ void App::UpdateLevelSelectScreen() {
           m_CurrentState = State::UPDATE;
         }
       }
+      return;
+    }
+  }
+
+  // ── BOSS 按鈕 ────────────────────────────────────────────
+  if (m_LevelSelectBossButton != nullptr) {
+    const bool bossHovered = IsCursorOver(m_LevelSelectBossButton);
+    SetButtonColor(m_LevelSelectBossButton,
+                   bossHovered ? hoverColor : Util::Color(255, 130, 110, 255));
+    if (bossHovered && Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB) &&
+        m_BossTestLevelIndex < m_Levels.size()) {
+      LoadLevel(m_BossTestLevelIndex);
+      m_CurrentState = State::UPDATE;
       return;
     }
   }

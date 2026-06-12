@@ -11,75 +11,158 @@
     "titleBackgroundPath": "images/titlescreen.png",
     "titleBackgroundZ": -100.0,
     "buttonColors": {
-      "default": [255, 255, 255, 255],
-      "hover": [255, 244, 200, 255]
+      "default": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "hover": [
+        255,
+        244,
+        200,
+        255
+      ]
     },
     "startButton": {
-      "fontPath": "fonts/Inter.ttf",
+      "fontPath": "fonts/BlackOpsOne-Regular.ttf",
       "fontSize": 40,
       "text": "start game",
-      "position": [0.0, -120.0],
+      "position": [
+        0.0,
+        -120.0
+      ],
       "zIndex": 130.0,
-      "color": [255, 255, 255, 255]
+      "color": [
+        255,
+        255,
+        255,
+        255
+      ]
     },
     "settingsButton": {
-      "fontPath": "fonts/Inter.ttf",
+      "fontPath": "fonts/BlackOpsOne-Regular.ttf",
       "fontSize": 40,
       "text": "settings",
-      "position": [0.0, -190.0],
+      "position": [
+        0.0,
+        -190.0
+      ],
       "zIndex": 130.0,
-      "color": [255, 255, 255, 255]
+      "color": [
+        255,
+        255,
+        255,
+        255
+      ]
     },
     "settingsTitle": {
-      "fontPath": "fonts/Inter.ttf",
+      "fontPath": "fonts/BlackOpsOne-Regular.ttf",
       "fontSize": 44,
       "text": "settings",
-      "position": [0.0, 130.0],
+      "position": [
+        0.0,
+        130.0
+      ],
       "zIndex": 210.0,
-      "color": [255, 244, 200, 255]
+      "color": [
+        255,
+        244,
+        200,
+        255
+      ]
     },
     "bgmLabel": {
-      "fontPath": "fonts/Inter.ttf",
+      "fontPath": "fonts/BlackOpsOne-Regular.ttf",
       "fontSize": 30,
       "text": "bgm",
-      "position": [0.0, 30.0],
+      "position": [
+        0.0,
+        30.0
+      ],
       "zIndex": 210.0,
-      "color": [255, 255, 255, 255]
+      "color": [
+        255,
+        255,
+        255,
+        255
+      ]
     },
     "sfxLabel": {
-      "fontPath": "fonts/Inter.ttf",
+      "fontPath": "fonts/BlackOpsOne-Regular.ttf",
       "fontSize": 30,
       "text": "sfx",
-      "position": [0.0, -60.0],
+      "position": [
+        0.0,
+        -60.0
+      ],
       "zIndex": 210.0,
-      "color": [255, 255, 255, 255]
+      "color": [
+        255,
+        255,
+        255,
+        255
+      ]
     },
     "backButton": {
-      "fontPath": "fonts/Inter.ttf",
+      "fontPath": "fonts/BlackOpsOne-Regular.ttf",
       "fontSize": 36,
       "text": "back",
-      "position": [0.0, -210.0],
+      "position": [
+        0.0,
+        -210.0
+      ],
       "zIndex": 210.0,
-      "color": [255, 255, 255, 255]
+      "color": [
+        255,
+        255,
+        255,
+        255
+      ]
     },
     "helpText": {
-      "fontPath": "fonts/Inter.ttf",
+      "fontPath": "fonts/BlackOpsOne-Regular.ttf",
       "fontSize": 22,
       "text": "drag the bars to set bgm and sfx volume",
-      "position": [0.0, -270.0],
+      "position": [
+        0.0,
+        -270.0
+      ],
       "zIndex": 210.0,
-      "color": [220, 220, 220, 255]
+      "color": [
+        220,
+        220,
+        220,
+        255
+      ]
     },
     "statusText": {
-      "fontPath": "fonts/Inter.ttf",
+      "fontPath": "fonts/BlackOpsOne-Regular.ttf",
       "fontSize": 32,
       "text": "Ready",
-      "position": [0.0, 0.0],
+      "position": [
+        0.0,
+        0.0
+      ],
       "zIndex": 100.0,
-      "color": [255, 255, 255, 255]
+      "color": [
+        255,
+        255,
+        255,
+        255
+      ]
     },
-    "statusOffset": [-500.0, 300.0],
+    "statusOffset": [
+      -500.0,
+      300.0
+    ],
     "levelClearText": "LEVEL CLEAR! \nPress N for next level."
+  },
+  "levelSelect": {
+    "fontPath": "fonts/BlackOpsOne-Regular.ttf",
+    "tabFontSize": 36,
+    "bossFontSize": 34,
+    "backFontSize": 32
   },
   "player": {
     "idleSpritePath": "images/meatboystanding.png",
@@ -122,6 +205,59 @@
     "wallBounceMinSpeed": 100.0,
     "wallBounceDamping": 0.22,
     "breakableTopContactEpsilon": 0.5
+  },
+  "buzzsaw": {
+    "speed": 400.0,
+    "intervalMs": 2000.0,
+    "zIndex": 5.0,
+    "spawnGraceMs": 200.0,
+    "size": [
+      15.0,
+      15.0
+    ]
+  },
+  "boss": {
+    "speed": 280.0,
+    "rushSpeed": 700.0,
+    "startDelayMs": 1000.0,
+    "visualSize": [
+      340.0,
+      200.0
+    ],
+    "zIndex": 9.0,
+    "bodyOffset": [
+      -27.0,
+      -21.0
+    ],
+    "bodySize": [
+      208.0,
+      145.0
+    ],
+    "sawOffset": [
+      106.0,
+      -19.0
+    ],
+    "sawSize": [
+      126.0,
+      44.0
+    ],
+    "behindKillMarginPx": 40.0,
+    "animFrames": [
+      "images/lilslugger_1.png",
+      "images/lilslugger_2.png"
+    ],
+    "animIntervalMs": 160,
+    "crashFrames": [
+      "images/lilslugger_crash.png"
+    ]
+  },
+  "rotor": {
+    "angularSpeedDegPerSec": 72.0,
+    "barThickness": 14.0,
+    "barZIndex": 4.0,
+    "sawZIndex": 5.0,
+    "hitboxScale": 0.85,
+    "barTexturePath": "images/rotor_bar.png"
   },
   "goalSizeScale": 0.9
 }

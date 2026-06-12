@@ -3,6 +3,7 @@
 #include <fstream>
 #include <filesystem>
 #include <limits>
+#include <optional>
 
 #include <nlohmann/json.hpp>
 
@@ -34,12 +35,17 @@ struct TmxConfig {
     std::string platformGroupName = "rectangle";
     std::string sawGroupName = "saws";
     std::string boundsGroupName = "bounds";
+    std::string rotorGroupName = "rotors";
+
+    // shoot layer names (configurable)
+    std::string shootLayerUp    = "shoot_up";
+    std::string shootLayerDown  = "shoot_down";
+    std::string shootLayerLeft  = "shoot_left";
+    std::string shootLayerRight = "shoot_right";
 
     std::uint32_t spawnLocalGid = 1;
     std::uint32_t goalLocalGid = 2;
     std::uint32_t disappearLocalGid = 3;
-    std::uint32_t shooterLocalGidMin = 13;
-    std::uint32_t shooterLocalGidMax = 16;
 
     float backgroundZ = -20.0F;
     float renderLayerZStep = 5.0F;
@@ -121,14 +127,21 @@ TmxConfig ParseTmxConfig(const json &root) {
     cfg.platformGroupName = root.value("platformGroupName", cfg.platformGroupName);
     cfg.sawGroupName = root.value("sawGroupName", cfg.sawGroupName);
     cfg.boundsGroupName = root.value("boundsGroupName", cfg.boundsGroupName);
+    cfg.rotorGroupName = root.value("rotorGroupName", cfg.rotorGroupName);
+
+    if (root.contains("shootLayers") && root["shootLayers"].is_object()) {
+        const auto &sl = root["shootLayers"];
+        cfg.shootLayerUp    = sl.value("up",    cfg.shootLayerUp);
+        cfg.shootLayerDown  = sl.value("down",  cfg.shootLayerDown);
+        cfg.shootLayerLeft  = sl.value("left",  cfg.shootLayerLeft);
+        cfg.shootLayerRight = sl.value("right", cfg.shootLayerRight);
+    }
 
     if (root.contains("tiles") && root["tiles"].is_object()) {
         const auto &tiles = root["tiles"];
         cfg.spawnLocalGid = tiles.value("spawnLocalGid", cfg.spawnLocalGid);
         cfg.goalLocalGid = tiles.value("goalLocalGid", cfg.goalLocalGid);
         cfg.disappearLocalGid = tiles.value("disappearLocalGid", cfg.disappearLocalGid);
-        cfg.shooterLocalGidMin = tiles.value("shooterLocalGidMin", cfg.shooterLocalGidMin);
-        cfg.shooterLocalGidMax = tiles.value("shooterLocalGidMax", cfg.shooterLocalGidMax);
     }
 
     if (root.contains("zIndex") && root["zIndex"].is_object()) {
@@ -365,6 +378,24 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
             const auto &layer = layerPtr->getLayerAs<tmx::TileLayer>();
             const bool isStationaryLayer = layer.getName() == cfg.stationaryLayerName;
             const bool isBreakableLayer = layer.getName() == cfg.breakableLayerName;
+
+            // Detect shoot layers
+            Game::ShootDirection shootDir{};
+            bool isShootLayer = false;
+            if (layer.getName() == cfg.shootLayerUp) {
+                isShootLayer = true;
+                shootDir = Game::ShootDirection::Up;
+            } else if (layer.getName() == cfg.shootLayerDown) {
+                isShootLayer = true;
+                shootDir = Game::ShootDirection::Down;
+            } else if (layer.getName() == cfg.shootLayerLeft) {
+                isShootLayer = true;
+                shootDir = Game::ShootDirection::Left;
+            } else if (layer.getName() == cfg.shootLayerRight) {
+                isShootLayer = true;
+                shootDir = Game::ShootDirection::Right;
+            }
+
             if (!layer.getVisible()) {
                 continue;
             }
@@ -415,6 +446,15 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
                     continue;
                 }
 
+                // If this is a shoot layer, record shooter position from any non-zero tile
+                if (isShootLayer) {
+                    Game::ShooterConfig shooter{};
+                    shooter.position = worldCenter;
+                    shooter.direction = shootDir;
+                    level.shooters.push_back(shooter);
+                    // Still fall through to render the tile as a visual
+                }
+
                 const auto localGid = decodeMyImagesLocal(tile.ID);
 
                 if (isStationaryLayer && localGid.has_value()) {
@@ -439,14 +479,8 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
                             1.0F));
                         continue;
                     }
-                    if (localGid.value() >= cfg.shooterLocalGidMin &&
-                        localGid.value() <= cfg.shooterLocalGidMax) {
-                        level.deathZones.push_back(MakeInvisibleCollider(
-                            worldCenter,
-                            {static_cast<float>(mapTileSize.x), static_cast<float>(mapTileSize.y)},
-                            3.0F));
-                        continue;
-                    }
+                    // Note: former shooterLocalGid deathZone logic removed.
+                    // Shooter tiles are now handled via shoot_* layers.
                 }
 
                 const auto *tileset = FindTilesetForGid(tilesets, tile.ID);
@@ -522,6 +556,7 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
         const bool isPlatformGroup = objectGroup.getName() == cfg.platformGroupName;
         const bool isSawGroup = objectGroup.getName() == cfg.sawGroupName;
         const bool isBoundsGroup = objectGroup.getName() == cfg.boundsGroupName;
+        const bool isRotorGroup = objectGroup.getName() == cfg.rotorGroupName;
         const auto layerOffset = layerPtr->getOffset();
 
         for (const auto &obj : objectGroup.getObjects()) {
@@ -549,6 +584,21 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
                 continue;
             }
 
+            // 旋轉鋸：橢圓物件 中心=軸心、寬/2=旋臂半徑、高=鋸片直徑
+            // 物件名 "single" → 單鋸繞軸；其餘 → 雙鋸對轉
+            // （必須在通用 ellipse→saw 分支之前攔截）
+            if (isRotorGroup) {
+                Game::RotorConfig rotor{};
+                rotor.pivot = worldCenter;
+                rotor.armRadius = size.x * 0.5F;
+                rotor.sawDiameter = (size.y > 0.0F) ? size.y : rotor.sawDiameter;
+                rotor.dual = (obj.getName() != "single");
+                // Tiled rotation 為順時針度數；遊戲世界 y 朝上 → 取負轉成 CCW
+                rotor.startAngleDeg = -obj.getRotation();
+                level.rotors.push_back(rotor);
+                continue;
+            }
+
             if (isSawGroup || obj.getShape() == tmx::Object::Shape::Ellipse) {
                 auto saw = MakeInvisibleCollider(worldCenter, size, 3.0F);
                 if (!cfg.sawAnimation.frames.empty()) {
@@ -571,6 +621,24 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
                 level.goalPosition = worldCenter;
                 level.goalSize = size;
                 goalFound = true;
+                continue;
+            }
+
+            // Boss（Lil' Slugger）標記：bossSpawn 存在才啟用 Boss
+            if (obj.getName() == "bossSpawn") {
+                level.boss.enabled = true;
+                level.boss.spawn = worldCenter;
+                continue;
+            }
+
+            if (obj.getName() == "bossRushTrigger") {
+                level.boss.rushTriggerX = worldCenter.x;
+                continue;
+            }
+
+            if (obj.getName() == "bossCrash") {
+                level.boss.crashX = worldCenter.x;
+                continue;
             }
         }
     }

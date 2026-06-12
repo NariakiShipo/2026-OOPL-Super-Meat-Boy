@@ -82,6 +82,9 @@ void App::RespawnPlayer() {
     }
     ++m_RespawnCount;
     LOG_INFO("Respawn count: {}", m_RespawnCount);
+
+    // Boss 戰：任何死因都整段重來（Boss 回起點重新計時）
+    ResetBoss();
 }
 
 void App::UpdateBreakableBlocks() {

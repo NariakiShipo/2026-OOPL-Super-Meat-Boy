@@ -6,6 +6,7 @@
 #include "game/BoxDrawable.hpp"
 #include "game/Collision.hpp"
 #include "game/LevelData.hpp"
+#include "game/TmxLoader.hpp"
 
 #include "config.hpp"
 
@@ -232,6 +233,22 @@ void App::InitWorld() {
 
     m_Worlds = Game::BuildWorldData();
     m_Levels = Game::BuildDefaultLevels();
+
+    // Boss 關（步驟3）：優先載入 forestboss.tmx 完整地形，
+    // 失敗則退回步驟1的手刻測試關；選關畫面按 B 進入
+    try {
+        auto bossLevel = Game::LoadLevelFromTmx("images/forestboss.tmx");
+        bossLevel.worldInfo = {Game::WorldCategory::Forest, "Forest",
+                               "images/forestlevelselect.png", 8};
+        m_Levels.push_back(std::move(bossLevel));
+        LOG_INFO("Loaded boss level from forestboss.tmx");
+    } catch (const std::exception &e) {
+        LOG_WARN("forestboss.tmx load failed ({}); using built-in test level",
+                 e.what());
+        m_Levels.push_back(Game::BuildBossTestLevel());
+    }
+    m_BossTestLevelIndex = m_Levels.size() - 1;
+
     m_CurrentLevelIndex = 0;
     m_LevelSelectWorldIndex = 0;
     ShowTitleScreen();
@@ -250,6 +267,9 @@ void App::LoadLevel(const std::size_t levelIndex) {
     m_BreakableBlocks.clear();
     m_DeathZones.clear();
     m_LevelRenderTiles.clear();
+    m_Shooters.clear();
+    m_LiveBuzzsaws.clear();
+    m_Rotors.clear();
 
     for (const auto &cfg : level.renderTiles) {
         m_LevelRenderTiles.push_back(
@@ -434,6 +454,24 @@ void App::LoadLevel(const std::size_t levelIndex) {
     if (m_StatusText != nullptr) {
         m_StatusText->SetText(ExtractLevelName(level.mapPath));
     }
+
+    // Initialise shooters; timer starts at intervalMs so first shot
+    // fires after one full interval (gives player reaction time)
+    for (const auto &sc : level.shooters) {
+        m_Shooters.push_back({sc, m_Config.buzzsaw.intervalMs});
+    }
+    LOG_INFO("Loaded {} shooter(s) for level '{}'",
+             m_Shooters.size(), level.mapPath);
+
+    // 旋轉鋸（ShowGameplayScreen 內會掛進 renderer）
+    SpawnRotors(level.rotors);
+
+    // Boss 關卡參數 + 生成（ShowGameplayScreen 內會掛進 renderer）
+    m_LevelHasBoss = level.boss.enabled;
+    m_BossSpawnPoint = level.boss.spawn;
+    m_BossRushTriggerX = level.boss.rushTriggerX;
+    m_BossCrashX = level.boss.crashX;
+    SpawnBoss();
 
     ShowGameplayScreen();
     RespawnPlayer();

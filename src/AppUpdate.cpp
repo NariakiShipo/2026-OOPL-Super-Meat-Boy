@@ -24,6 +24,12 @@ void App::Update() {
     } else {
         const auto dtMs = std::max(Util::Time::GetDeltaTimeMs(), 1.0F);
         StepPlayer(dtMs);
+        UpdateShooters(dtMs);
+        CheckBuzzsawPlayerCollisions();
+        UpdateRotors(dtMs);
+        CheckRotorPlayerCollisions();
+        StepBoss(dtMs);
+        CheckBossPlayerCollision();
         UpdateCamera(dtMs);
     }
 

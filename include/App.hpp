@@ -37,6 +37,16 @@ public:
         END,
     };
 
+    // Boss (Lil' Slugger) 狀態機：
+    // WAITING(進關延遲) → CHASING(等速追擊) → RUSHING(終點前加速) → CRASHED(撞牆停止)
+    enum class BossPhase {
+        INACTIVE,
+        WAITING,
+        CHASING,
+        RUSHING,
+        CRASHED,
+    };
+
     State GetCurrentState() const { return m_CurrentState; }
 
     void Start();
@@ -80,15 +90,31 @@ private:
                                                      const glm::vec4 &uvRect =
                                                          {0.0F, 0.0F, 1.0F, 1.0F},
                                                      bool visible = true) const;
+    void UpdateShooters(float dtMs);
+    void CheckBuzzsawPlayerCollisions();
+    void SpawnBoss();
+    void ResetBoss();
+    void StepBoss(float dtMs);
+    void CheckBossPlayerCollision();
+    void SpawnRotors(const std::vector<Game::RotorConfig> &configs);
+    void UpdateRotors(float dtMs);
+    void CheckRotorPlayerCollisions();
 
 private:
     struct UiTextSpec {
-        std::string fontPath = "fonts/Inter.ttf";
+        std::string fontPath = "fonts/BlackOpsOne-Regular.ttf";
         int fontSize = 32;
         std::string text;
         glm::vec2 position = {0.0F, 0.0F};
         float zIndex = 0.0F;
         Util::Color color = Util::Color(255, 255, 255, 255);
+    };
+
+    struct LevelSelectConfig {
+        std::string fontPath = "fonts/BlackOpsOne-Regular.ttf";
+        int tabFontSize = 36;
+        int bossFontSize = 34;
+        int backFontSize = 32;
     };
 
     struct AudioConfig {
@@ -106,7 +132,7 @@ private:
         Util::Color buttonDefaultColor = Util::Color(255, 255, 255, 255);
         Util::Color buttonHoverColor = Util::Color(255, 244, 200, 255);
         UiTextSpec startButton{
-            "fonts/Inter.ttf",
+            "fonts/BlackOpsOne-Regular.ttf",
             40,
             "start game",
             {0.0F, -120.0F},
@@ -114,7 +140,7 @@ private:
             Util::Color(255, 255, 255, 255),
         };
         UiTextSpec settingsButton{
-            "fonts/Inter.ttf",
+            "fonts/BlackOpsOne-Regular.ttf",
             40,
             "settings",
             {0.0F, -190.0F},
@@ -122,7 +148,7 @@ private:
             Util::Color(255, 255, 255, 255),
         };
         UiTextSpec settingsTitle{
-            "fonts/Inter.ttf",
+            "fonts/BlackOpsOne-Regular.ttf",
             44,
             "settings",
             {0.0F, 130.0F},
@@ -130,7 +156,7 @@ private:
             Util::Color(255, 244, 200, 255),
         };
         UiTextSpec bgmLabel{
-            "fonts/Inter.ttf",
+            "fonts/BlackOpsOne-Regular.ttf",
             30,
             "bgm",
             {0.0F, 30.0F},
@@ -138,7 +164,7 @@ private:
             Util::Color(255, 255, 255, 255),
         };
         UiTextSpec sfxLabel{
-            "fonts/Inter.ttf",
+            "fonts/BlackOpsOne-Regular.ttf",
             30,
             "sfx",
             {0.0F, -60.0F},
@@ -146,7 +172,7 @@ private:
             Util::Color(255, 255, 255, 255),
         };
         UiTextSpec backButton{
-            "fonts/Inter.ttf",
+            "fonts/BlackOpsOne-Regular.ttf",
             36,
             "back",
             {0.0F, -210.0F},
@@ -154,7 +180,7 @@ private:
             Util::Color(255, 255, 255, 255),
         };
         UiTextSpec helpText{
-            "fonts/Inter.ttf",
+            "fonts/BlackOpsOne-Regular.ttf",
             22,
             "drag the bars to set bgm and sfx volume",
             {0.0F, -270.0F},
@@ -162,7 +188,7 @@ private:
             Util::Color(220, 220, 220, 255),
         };
         UiTextSpec toLevelSelectButton{
-            "fonts/Inter.ttf",
+            "fonts/BlackOpsOne-Regular.ttf",
             32,
             "back to level select",
             {0.0F, -340.0F},
@@ -170,7 +196,7 @@ private:
             Util::Color(255, 200, 200, 255),
         };
         UiTextSpec statusText{
-            "fonts/Inter.ttf",
+            "fonts/BlackOpsOne-Regular.ttf",
             32,
             "Ready",
             {0.0F, 0.0F},
@@ -226,12 +252,62 @@ private:
         float breakableTopContactEpsilon = 0.5F;
     };
 
+    struct BuzzsawConfig {
+        float speed = 400.0F;                  // px per second
+        float intervalMs = 2000.0F;            // firing interval
+        float zIndex = 5.0F;
+        glm::vec2 size = {0.0F, 0.0F};        // [0,0] = natural animation size
+        float spawnGraceMs = 500.0F;          // wall-collision immunity after spawn
+        std::vector<std::string> animFrames = {
+            "images/buzzsaw2_1.png",
+            "images/buzzsaw2_2.png",
+            "images/buzzsaw2_3.png",
+        };
+        std::size_t animIntervalMs = 80;
+    };
+
+    struct BossConfig {
+        float speed = 280.0F;          // CHASING 水平速度 (px/s)，< 玩家 walk 300
+        float rushSpeed = 700.0F;      // RUSHING 衝撞速度 (px/s)
+        float startDelayMs = 1000.0F;  // 進關到起追的延遲
+        glm::vec2 visualSize = {340.0F, 200.0F}; // 整體 sprite 顯示尺寸（玩家約14px）
+        float zIndex = 9.0F;           // 玩家 zIndex=10，Boss 略低
+        // 碰撞箱（相對 Boss 物件中心，+x 為前進方向；依 sprite 區塊換算）
+        glm::vec2 bodyOffset = {-27.0F, -21.0F};
+        glm::vec2 bodySize = {208.0F, 145.0F};
+        glm::vec2 sawOffset = {106.0F, -19.0F};  // 前伸鏈鋸（又長又扁）
+        glm::vec2 sawSize = {126.0F, 44.0F};
+        float behindKillMarginPx = 40.0F;  // 玩家整個落在機身後方超過此距離 → 視為被輾過
+        std::vector<std::string> animFrames = {
+            "images/lilslugger_1.png",
+            "images/lilslugger_2.png",
+        };
+        std::size_t animIntervalMs = 160;
+        std::vector<std::string> crashFrames = {  // CRASHED 撞毀燃燒
+            "images/lilslugger_crash.png",
+        };
+    };
+
+    struct RotorTuningConfig {
+        float angularSpeedDegPerSec = 72.0F;  // 旋轉角速度（正值=逆時針）
+        float barThickness = 14.0F;           // 旋臂視覺厚度
+        float barZIndex = 4.0F;
+        float sawZIndex = 5.0F;
+        float hitboxScale = 0.85F;            // 鋸片 AABB 縮小係數（圓形視覺的公平判定）
+        std::string barTexturePath = "images/rotor_bar.png";
+        // 鋸片動畫沿用 buzzsaw.animFrames / animIntervalMs
+    };
+
     struct GameplayConfig {
         AudioConfig audio;
         UiConfig ui;
+        LevelSelectConfig levelSelect;
         PlayerConfig player;
         CameraConfig camera;
         CollisionConfig collision;
+        BuzzsawConfig buzzsaw;
+        BossConfig boss;
+        RotorTuningConfig rotor;
         float goalSizeScale = 0.9F;
     };
 
@@ -241,6 +317,34 @@ private:
         glm::vec2 colliderSize = {0.0F, 0.0F};
         bool breaking = false;
         bool broken = false;
+    };
+
+    struct LiveBuzzsaw {
+        std::shared_ptr<Util::GameObject> object;
+        glm::vec2 velocity = {0.0F, 0.0F};
+        float graceTimerMs = 0.0F;  // wall-collision immunity countdown
+        bool active = true;
+    };
+
+    struct ShooterState {
+        Game::ShooterConfig config;
+        float timerMs = 0.0F;  // countdown; fires when <= 0
+    };
+
+    struct BossState {
+        std::shared_ptr<Util::GameObject> object;
+        BossPhase phase = BossPhase::INACTIVE;
+        float waitTimerMs = 0.0F;
+        std::shared_ptr<Core::Drawable> walkDrawable;   // 行走動畫
+        std::shared_ptr<Core::Drawable> crashDrawable;  // 撞毀燃燒
+    };
+
+    struct RotorState {
+        Game::RotorConfig config;
+        float angleDeg = 0.0F;
+        std::shared_ptr<Util::GameObject> bar;   // 旋臂（隨角度旋轉）
+        std::shared_ptr<Util::GameObject> sawA;  // 兩端鋸片
+        std::shared_ptr<Util::GameObject> sawB;
     };
 
     struct AudioSettings {
@@ -283,6 +387,19 @@ private:
     std::vector<std::shared_ptr<Util::GameObject>> m_LevelRenderTiles;
     std::shared_ptr<Util::GameObject> m_GoalFlag;
 
+    std::vector<ShooterState>  m_Shooters;
+    std::vector<LiveBuzzsaw>   m_LiveBuzzsaws;
+
+    std::vector<RotorState> m_Rotors;  // 旋轉鋸
+
+    // Boss（由目前關卡的 LevelConfig::boss 驅動）
+    BossState m_Boss;
+    bool m_LevelHasBoss = false;
+    glm::vec2 m_BossSpawnPoint = {0.0F, 0.0F};
+    float m_BossRushTriggerX = 0.0F;  // 玩家越過此 x → Boss 進 RUSHING
+    float m_BossCrashX = 0.0F;        // Boss 抵達此 x → CRASHED
+    std::size_t m_BossTestLevelIndex = 0;  // 除錯入口（選關畫面按 B）
+
     std::shared_ptr<Util::GameObject> m_StatusBoard;
     std::shared_ptr<Util::Text> m_StatusText;
 
@@ -296,6 +413,7 @@ private:
     std::vector<std::shared_ptr<Util::GameObject>> m_WorldTabButtons;
     std::vector<std::shared_ptr<Util::GameObject>> m_LevelSelectButtons;
     std::vector<std::shared_ptr<Util::GameObject>> m_LevelHoverOverlays;
+    std::shared_ptr<Util::GameObject> m_LevelSelectBossButton;  // Forest 第9格(BOSS)
     std::shared_ptr<Util::GameObject> m_LevelSelectBackButton;
     std::shared_ptr<Util::GameObject> m_LevelSelectTitle;
     std::vector<std::shared_ptr<Util::GameObject>> m_LevelSelectObjects;

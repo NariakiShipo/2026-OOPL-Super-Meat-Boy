@@ -311,4 +311,72 @@ std::vector<LevelConfig> BuildDefaultLevels() {
 
     return {fallback1};
 }
+
+// ── W1 Boss「Lil' Slugger」步驟1 測試關 ──────────────────────────
+// S0–S1 短版手刻地形：平地 + 鋸片×3 + 跳坑 + 終點高台。
+// 之後步驟3 改為 forestboss.tmx 完整 S0–S8 地形。
+//
+// 佈局（x 由左到右）：
+//   -2850  Boss 起點          -2400 玩家出生
+//   -1500/-800/-100 地面鋸片   900..1080 跳坑
+//   1700  (預留)               2400 高台起點 = rushTriggerX
+//   2150  Boss 撞牆點          2750 Bandage Girl
+LevelConfig BuildBossTestLevel() {
+    using Obj = LevelObjectConfig;
+
+    LevelConfig cfg;
+    cfg.mapPath = "boss_lilslugger_test";
+    cfg.mapPixelSize = {6000.0F, 900.0F};
+    cfg.worldBoundsMin = {-3000.0F, -450.0F};
+    cfg.worldBoundsMax = {3000.0F, 450.0F};
+    cfg.spawn = {-2400.0F, -200.0F};
+    cfg.goalPosition = {2750.0F, -140.0F};
+    cfg.goalSize = {60.0F, 90.0F};
+    cfg.goalTexturePath = "images/bandagegirl.png";
+    cfg.worldInfo = {WorldCategory::Forest, "Forest",
+                     "images/forestlevelselect.png", 8};
+
+    // 背景（拉伸暫代）
+    cfg.renderTiles = {
+        Obj{{0.0F, 0.0F}, {6000.0F, 900.0F}, -50.0F, "images/forestbg.png",
+            {0.0F, 0.0F, 1.0F, 1.0F}, true, {}, 0},
+    };
+
+    // 地面：跳坑(900..1080)切成左右兩段；右側終點高台
+    cfg.platforms = {
+        // 左段地面 -3000..900，頂面 y=-310
+        Obj{{-1050.0F, -380.0F}, {3900.0F, 140.0F}, 1.0F,
+            "images/foresttiles01.png", {0.0F, 0.0F, 1.0F, 1.0F}, true, {}, 0},
+        // 右段地面 1080..3000
+        Obj{{2040.0F, -380.0F}, {1920.0F, 140.0F}, 1.0F,
+            "images/foresttiles01.png", {0.0F, 0.0F, 1.0F, 1.0F}, true, {}, 0},
+        // 終點高台 2400..3000，頂面 y=-230（Boss 撞這面牆下方）
+        Obj{{2700.0F, -270.0F}, {600.0F, 80.0F}, 2.0F,
+            "images/factorytiles01.png", {0.0F, 0.0F, 1.0F, 1.0F}, true, {}, 0},
+    };
+
+    // 地面鋸片×3（死亡區、循環動畫），半埋於地面、跳過即可
+    const std::vector<std::string> sawFrames = {
+        "images/buzzsaw2_1.png",
+        "images/buzzsaw2_2.png",
+        "images/buzzsaw2_3.png",
+    };
+    const auto makeSaw = [&sawFrames](const float x) {
+        return Obj{{x, -265.0F}, {90.0F, 90.0F}, 5.0F, "",
+                   {0.0F, 0.0F, 1.0F, 1.0F}, true, sawFrames, 80};
+    };
+    cfg.deathZones = {
+        makeSaw(-1500.0F),
+        makeSaw(-800.0F),
+        makeSaw(-100.0F),
+    };
+
+    // Boss：起點在玩家後方，視覺底邊貼地（-210 - 100 = -310 = 地面頂，視覺 340x200）
+    cfg.boss.enabled = true;
+    cfg.boss.spawn = {-2850.0F, -210.0F};
+    cfg.boss.rushTriggerX = 2400.0F;  // 玩家踏上高台 → Boss 加速
+    cfg.boss.crashX = 2150.0F;        // 撞牆點（高台左牆前）
+
+    return cfg;
+}
 } // namespace Game

@@ -7,6 +7,9 @@ set(SRC_FILES
     AppCollision.cpp
     AppMovement.cpp
     AppCamera.cpp
+    AppShooter.cpp
+    AppBoss.cpp
+    AppRotor.cpp
     AppUpdate.cpp
     AppEnd.cpp
     common/AssetPath.cpp

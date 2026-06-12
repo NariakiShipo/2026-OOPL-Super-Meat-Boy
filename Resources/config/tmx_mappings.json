@@ -8,6 +8,12 @@
   "platformGroupName": "rectangle",
   "sawGroupName": "saws",
   "boundsGroupName": "bounds",
+  "shootLayers": {
+    "up":    "shoot_up",
+    "down":  "shoot_down",
+    "left":  "shoot_left",
+    "right": "shoot_right"
+  },
   "tiles": {
     "spawnLocalGid": 1,
     "goalLocalGid": 2,

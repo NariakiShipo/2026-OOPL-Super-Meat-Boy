@@ -134,6 +134,18 @@ void App::LoadGameConfig() {
                 ui.value("levelClearText", m_Config.ui.levelClearText);
         }
 
+        if (root.contains("levelSelect") && root["levelSelect"].is_object()) {
+            const auto &ls = root["levelSelect"];
+            m_Config.levelSelect.fontPath =
+                ls.value("fontPath", m_Config.levelSelect.fontPath);
+            m_Config.levelSelect.tabFontSize =
+                ls.value("tabFontSize", m_Config.levelSelect.tabFontSize);
+            m_Config.levelSelect.bossFontSize =
+                ls.value("bossFontSize", m_Config.levelSelect.bossFontSize);
+            m_Config.levelSelect.backFontSize =
+                ls.value("backFontSize", m_Config.levelSelect.backFontSize);
+        }
+
         if (root.contains("player") && root["player"].is_object()) {
             const auto &player = root["player"];
             m_Config.player.idleSpritePath =
@@ -219,6 +231,78 @@ void App::LoadGameConfig() {
             m_Config.collision.breakableTopContactEpsilon = collision.value(
                 "breakableTopContactEpsilon",
                 m_Config.collision.breakableTopContactEpsilon);
+        }
+
+        if (root.contains("buzzsaw") && root["buzzsaw"].is_object()) {
+            const auto &bz = root["buzzsaw"];
+            m_Config.buzzsaw.speed =
+                bz.value("speed", m_Config.buzzsaw.speed);
+            m_Config.buzzsaw.intervalMs =
+                bz.value("intervalMs", m_Config.buzzsaw.intervalMs);
+            m_Config.buzzsaw.zIndex =
+                bz.value("zIndex", m_Config.buzzsaw.zIndex);
+            m_Config.buzzsaw.spawnGraceMs =
+                bz.value("spawnGraceMs", m_Config.buzzsaw.spawnGraceMs);
+            m_Config.buzzsaw.size =
+                ParseVec2(bz.value("size", json::array()), m_Config.buzzsaw.size);
+        }
+
+        if (root.contains("boss") && root["boss"].is_object()) {
+            const auto &boss = root["boss"];
+            m_Config.boss.speed = boss.value("speed", m_Config.boss.speed);
+            m_Config.boss.rushSpeed =
+                boss.value("rushSpeed", m_Config.boss.rushSpeed);
+            m_Config.boss.startDelayMs =
+                boss.value("startDelayMs", m_Config.boss.startDelayMs);
+            m_Config.boss.visualSize = ParseVec2(
+                boss.value("visualSize", json::array()), m_Config.boss.visualSize);
+            m_Config.boss.zIndex = boss.value("zIndex", m_Config.boss.zIndex);
+            m_Config.boss.bodyOffset = ParseVec2(
+                boss.value("bodyOffset", json::array()), m_Config.boss.bodyOffset);
+            m_Config.boss.bodySize = ParseVec2(
+                boss.value("bodySize", json::array()), m_Config.boss.bodySize);
+            m_Config.boss.sawOffset = ParseVec2(
+                boss.value("sawOffset", json::array()), m_Config.boss.sawOffset);
+            m_Config.boss.sawSize = ParseVec2(
+                boss.value("sawSize", json::array()), m_Config.boss.sawSize);
+            m_Config.boss.animIntervalMs =
+                boss.value("animIntervalMs", m_Config.boss.animIntervalMs);
+            m_Config.boss.behindKillMarginPx =
+                boss.value("behindKillMarginPx", m_Config.boss.behindKillMarginPx);
+
+            const auto parseFrameList = [&boss](const char *key,
+                                                std::vector<std::string> *out) {
+                if (out == nullptr || !boss.contains(key) || !boss[key].is_array()) {
+                    return;
+                }
+                std::vector<std::string> frames;
+                for (const auto &frame : boss[key]) {
+                    if (frame.is_string()) {
+                        frames.push_back(frame.get<std::string>());
+                    }
+                }
+                if (!frames.empty()) {
+                    *out = std::move(frames);
+                }
+            };
+            parseFrameList("animFrames", &m_Config.boss.animFrames);
+            parseFrameList("crashFrames", &m_Config.boss.crashFrames);
+        }
+
+        if (root.contains("rotor") && root["rotor"].is_object()) {
+            const auto &rotor = root["rotor"];
+            m_Config.rotor.angularSpeedDegPerSec = rotor.value(
+                "angularSpeedDegPerSec", m_Config.rotor.angularSpeedDegPerSec);
+            m_Config.rotor.barThickness =
+                rotor.value("barThickness", m_Config.rotor.barThickness);
+            m_Config.rotor.barZIndex =
+                rotor.value("barZIndex", m_Config.rotor.barZIndex);
+            m_Config.rotor.sawZIndex =
+                rotor.value("sawZIndex", m_Config.rotor.sawZIndex);
+            m_Config.rotor.hitboxScale =
+                rotor.value("hitboxScale", m_Config.rotor.hitboxScale);
+            m_Config.rotor.barTexturePath =
+                rotor.value("barTexturePath", m_Config.rotor.barTexturePath);
         }
 
         m_Config.goalSizeScale = root.value("goalSizeScale", m_Config.goalSizeScale);

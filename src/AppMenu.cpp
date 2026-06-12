@@ -191,6 +191,20 @@ void App::ShowGameplayScreen() {
     for (const auto &deathZone : m_DeathZones) {
         m_Root.AddChild(deathZone);
     }
+    for (const auto &rotor : m_Rotors) {
+        if (rotor.bar != nullptr) {
+            m_Root.AddChild(rotor.bar);
+        }
+        if (rotor.sawA != nullptr) {
+            m_Root.AddChild(rotor.sawA);
+        }
+        if (rotor.sawB != nullptr) {
+            m_Root.AddChild(rotor.sawB);
+        }
+    }
+    if (m_Boss.object != nullptr) {
+        m_Root.AddChild(m_Boss.object);
+    }
     m_Root.AddChild(m_GoalFlag);
     m_Root.AddChild(m_Player);
     m_Root.AddChild(m_StatusBoard);
