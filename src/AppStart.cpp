@@ -458,9 +458,12 @@ void App::LoadLevel(const std::size_t levelIndex) {
         m_CameraBoundsMin.y = minCameraY;
         m_CameraBoundsMax.y = maxCameraY;
     } else {
-        const float centerY = (worldBounds.minY + worldBounds.maxY) * 0.5F;
-        m_CameraBoundsMin.y = centerY;
-        m_CameraBoundsMax.y = centerY;
+        // 視野比地圖還高時，把鏡頭頂端對齊地圖上邊界（而非置中），
+        // 讓多出來的空白落在地圖下方，避免鏡頭在上方露出黑邊。
+        // maxCameraY = worldBoundsMax.y - cameraHalfWindow.y，
+        // 鏡頭位在此處時，畫面上緣剛好等於地圖頂端。
+        m_CameraBoundsMin.y = maxCameraY;
+        m_CameraBoundsMax.y = maxCameraY;
     }
 
     m_CameraPosition.x = ClampToRangeOrCenter(m_PlayerSpawn.x, m_CameraBoundsMin.x,
