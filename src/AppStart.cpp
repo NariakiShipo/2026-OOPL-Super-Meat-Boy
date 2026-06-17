@@ -212,7 +212,12 @@ void App::InitWorld() {
         m_SettingsButton,
     };
 
+    // 設定頁底板（在遊戲中開啟也看得清楚）
+    auto settingsPanel = CreatePlatform({0.0F, -90.0F}, {840.0F, 600.0F},
+                                        205.0F, "images/ui_panel.png");
+
     m_SettingsObjects = {
+        settingsPanel,
         m_SettingsTitleText,
         m_BgmSettingText,
         m_SfxSettingText,
@@ -220,6 +225,18 @@ void App::InitWorld() {
         m_SettingsHelpText,
         m_SettingsToLevelSelectButton,
     };
+
+    // 記錄基準 transform：OpenSettingsMenu 依目前相機重新放置
+    m_SettingsBasePositions.clear();
+    m_SettingsBaseScales.clear();
+    for (const auto &object : m_SettingsObjects) {
+        m_SettingsBasePositions.push_back(
+            object != nullptr ? object->m_Transform.translation
+                              : glm::vec2{0.0F, 0.0F});
+        m_SettingsBaseScales.push_back(object != nullptr
+                                           ? object->m_Transform.scale
+                                           : glm::vec2{1.0F, 1.0F});
+    }
 
     m_TitleBGM = std::make_shared<Util::BGM>(
         Common::ResolveAssetPath(m_Config.audio.titleBgmPath));
@@ -230,6 +247,8 @@ void App::InitWorld() {
     LoadAudioSettings();
     ApplyAudioSettings();
     m_TitleBGM->Play(-1);
+
+    BuildPauseMenu();
 
     m_Worlds = Game::BuildWorldData();
     m_Levels = Game::BuildDefaultLevels();

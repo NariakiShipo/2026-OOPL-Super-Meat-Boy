@@ -1,5 +1,7 @@
 #include "App.hpp"
 
+#include <cmath>
+
 #include "Util/Logger.hpp"
 
 void App::ApplyPlayerDrawable(const std::shared_ptr<Core::Drawable> &drawable) {
@@ -68,6 +70,8 @@ void App::RespawnPlayer() {
     m_CameraLookaheadOffset = {0.0F, 0.0F};
     m_IsJumping = false;
     m_JumpHoldTimerMs = 0.0F;
+    m_JumpBufferTimerMs = 0.0F;
+    m_CoyoteTimerMs = 0.0F;
     m_PlayerOnGround = false;
     m_PlayerOnWall = false;
     m_WallJumpDirection = 0.0F;
@@ -83,8 +87,48 @@ void App::RespawnPlayer() {
     ++m_RespawnCount;
     LOG_INFO("Respawn count: {}", m_RespawnCount);
 
-    // Boss 戰：任何死因都整段重來（Boss 回起點重新計時）
+    // 死亡 = 整張地圖狀態重置：Boss 回起點、破壞物復原、飛鋸清場
     ResetBoss();
+    ResetLevelDynamics();
+}
+
+// 重置關卡動態狀態（死亡/重生時呼叫），使破壞物等回復原樣
+void App::ResetLevelDynamics() {
+    // 碎裂磚復原：動畫回第 0 幀、重新顯示、旗標歸零
+    for (auto &breakable : m_BreakableBlocks) {
+        breakable.breaking = false;
+        breakable.broken = false;
+        if (breakable.animation != nullptr) {
+            breakable.animation->SetCurrentFrame(0);
+            breakable.animation->Pause();
+        }
+        if (breakable.object != nullptr) {
+            breakable.object->SetVisible(true);
+        }
+    }
+
+    // 場上飛行中的鋸片全部清除
+    for (auto &bz : m_LiveBuzzsaws) {
+        if (bz.object != nullptr) {
+            bz.object->SetVisible(false);
+        }
+        bz.active = false;
+    }
+    m_LiveBuzzsaws.clear();
+
+    // 發射器計時重新倒數（重生後保留一個完整間隔的反應時間）
+    for (auto &shooter : m_Shooters) {
+        shooter.timerMs = m_Config.buzzsaw.intervalMs;
+    }
+
+    // 旋轉鋸回到起始角（每次重試的時機完全一致）
+    for (auto &rotor : m_Rotors) {
+        rotor.angleDeg = std::fmod(rotor.config.startAngleDeg, 360.0F);
+        if (rotor.angleDeg < 0.0F) {
+            rotor.angleDeg += 360.0F;
+        }
+    }
+    UpdateRotors(0.0F);  // 立即套用位置/角度，避免殘留上一幀狀態
 }
 
 void App::UpdateBreakableBlocks() {

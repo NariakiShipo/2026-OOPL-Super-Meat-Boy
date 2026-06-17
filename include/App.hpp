@@ -32,9 +32,16 @@ public:
     enum class State {
         START,
         TITLE,
+        WORLD_SELECT,
         LEVEL_SELECT,
         UPDATE,
         END,
+    };
+
+    // 標題畫面兩階段：PRESS START → 主選單
+    enum class TitlePhase {
+        PRESS_START,
+        MENU,
     };
 
     // Boss (Lil' Slugger) 狀態機：
@@ -53,6 +60,8 @@ public:
 
     void Title();
 
+    void WorldSelect();
+
     void LevelSelect();
 
     void Update();
@@ -65,13 +74,20 @@ private:
     void LoadLevel(std::size_t levelIndex);
     void ShowTitleScreen();
     void ShowGameplayScreen();
+    void ShowWorldSelectScreen();
     void ShowLevelSelectScreen();
     void OpenSettingsMenu();
     void CloseSettingsMenu();
     void StartGame();
     void UpdateTitleScreen();
+    void UpdateWorldSelectScreen();
     void UpdateLevelSelectScreen();
     void UpdateSettingsMenu();
+    void SetTitlePhase(TitlePhase phase);
+    void BuildPauseMenu();
+    void OpenPauseMenu();
+    void ClosePauseMenu();
+    void UpdatePauseMenu();
     void LoadAudioSettings();
     void SaveAudioSettings() const;
     void ApplyAudioSettings();
@@ -83,6 +99,7 @@ private:
     void UpdateBreakableBlocks();
     void ApplyPlayerDrawable(const std::shared_ptr<Core::Drawable> &drawable);
     void RespawnPlayer();
+    void ResetLevelDynamics();  // 死亡時重置碎裂磚/飛鋸/發射器/旋轉鋸
     std::shared_ptr<Util::GameObject> CreatePlatform(const glm::vec2 &position,
                                                      const glm::vec2 &size,
                                                      float zIndex,
@@ -216,15 +233,26 @@ private:
         struct Movement {
             float moveSpeed = 360.0F;
             float sprintMultiplier = 1.8F;
+            // 水平加速度模型（原作手感：快起步、放開會滑、空中保留動量）
+            float groundAccel = 4000.0F;   // 地面朝輸入方向加速 (px/s^2)
+            float groundDecel = 3000.0F;   // 地面無輸入減速（滑行感）
+            float airAccel = 2600.0F;      // 空中加速（接近全空控）
+            float airDecel = 600.0F;       // 空中無輸入減速（保留動量）
             float jumpVelocity = 500.0F;
             float jumpHoldMaxMs = 170.0F;
             float jumpHoldBoost = 2000.0F;
             float shortHopCutRatio = 0.42F;
+            float jumpBufferMs = 90.0F;    // 落地前先按跳的緩衝
+            float coyoteMs = 70.0F;        // 離開平台邊緣後仍可跳的寬限
             float wallJumpHorizontalVelocity = 430.0F;
             float wallJumpControlLockMs = 140.0F;
             float wallReattachCooldownMs = 110.0F;
             float wallSlideMaxFallSpeed = 260.0F;
+            // 非對稱重力：下落較快（落地乾脆）；gravity 為舊欄位（兩者預設值）
             float gravity = -1800.0F;
+            float gravityUp = -1500.0F;    // 上升段
+            float gravityDown = -1900.0F;  // 下落段
+            float maxFallSpeed = 650.0F;   // 終端速度
         } movement;
         struct Animation {
             float airborneThreshold = 20.0F;
@@ -370,6 +398,48 @@ private:
 
     std::vector<std::shared_ptr<Util::GameObject>> m_TitleScreenObjects;
     std::vector<std::shared_ptr<Util::GameObject>> m_SettingsObjects;
+    // 設定頁基準 transform（開啟時依相機位置/縮放重新套用）
+    std::vector<glm::vec2> m_SettingsBasePositions;
+    std::vector<glm::vec2> m_SettingsBaseScales;
+
+    // ── 標題畫面（PRESS START → 主選單）─────────────────────
+    TitlePhase m_TitlePhase = TitlePhase::PRESS_START;
+    int m_TitleMenuIndex = 0;
+    float m_TitleBlinkMs = 0.0F;
+    std::shared_ptr<Util::GameObject> m_PressStartPanel;
+    std::shared_ptr<Util::GameObject> m_PressStartText;
+    std::shared_ptr<Util::GameObject> m_TitleMenuPanel;
+    std::shared_ptr<Util::GameObject> m_TitleMenuArrow;
+    std::shared_ptr<Util::GameObject> m_TitleHintText;
+    std::vector<std::shared_ptr<Util::GameObject>> m_TitleMenuItems;
+
+    // ── 世界地圖選擇 ─────────────────────────────────────────
+    std::shared_ptr<Util::GameObject> m_WorldSelTitleText;
+    std::shared_ptr<Util::GameObject> m_WorldSelCountText;
+    std::shared_ptr<Util::GameObject> m_WorldSelPreview;
+    std::vector<std::shared_ptr<Util::GameObject>> m_WorldSelectObjects;
+
+    // ── 關卡節點圖 ───────────────────────────────────────────
+    struct LevelNode {
+        std::shared_ptr<Util::GameObject> tile;
+        std::shared_ptr<Util::GameObject> label;   // BOSS 節點為 nullptr
+        std::size_t globalLevelIndex = 0;
+        glm::vec2 position = {0.0F, 0.0F};
+        std::string displayName;
+    };
+    std::vector<LevelNode> m_LevelNodes;
+    int m_LevelNodeIndex = 0;
+    std::shared_ptr<Util::GameObject> m_LevelSelBottomText;
+
+    // ── 暫停選單 ─────────────────────────────────────────────
+    bool m_PauseMenuVisible = false;
+    int m_PauseMenuIndex = 0;
+    std::vector<std::shared_ptr<Util::GameObject>> m_PauseObjects;
+    std::vector<std::shared_ptr<Util::GameObject>> m_PauseMenuItems;
+    std::shared_ptr<Util::GameObject> m_PauseArrow;
+    // 基準 transform（開啟時以相機位置/縮放重新套用，避免重複疊加）
+    std::vector<glm::vec2> m_PauseBasePositions;
+    std::vector<glm::vec2> m_PauseBaseScales;
 
     std::shared_ptr<Util::GameObject> m_Player;
     std::shared_ptr<Core::Drawable> m_PlayerIdleDrawable;
@@ -448,6 +518,8 @@ private:
     glm::vec2 m_PlayerVelocity = {0.0F, 0.0F};
     bool m_IsJumping = false;
     float m_JumpHoldTimerMs = 0.0F;
+    float m_JumpBufferTimerMs = 0.0F;  // 跳躍輸入緩衝倒數
+    float m_CoyoteTimerMs = 0.0F;      // 土狼時間倒數
     bool m_PlayerOnGround = false;
     bool m_PlayerOnWall = false;
     float m_WallJumpDirection = 0.0F;

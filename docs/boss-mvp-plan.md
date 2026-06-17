@@ -75,6 +75,14 @@ WAITING(startDelay) → CHASING(等速 280 向右)
    - 防站樑：門樑頂 -50 低於 Boss 機身頂 -28.5（站上仍被輾）
    - 純走路時間線：38.5 秒抵達終點、全程未被追上（與影片 38 秒節奏一致）
 
+**v12 修正**：(1) 暫停/設定選單點選偏移——根因是 PTSD 對 **zIndex ≥ 100 的物件強制 zoom=1**（內建 UI 層），先前加的 1/zoom 補償反而造成位移與放大；已改回「位置＝相機位置＋基準偏移、尺寸不縮放」，滑鼠判定同步修正。(2) 蹬牆反彈距離調短：wallJumpHorizontalVelocity 430→320、wallJumpControlLockMs 300→130（外推距離約 165px→62px，可連續蹬同面牆上爬）；碰撞反彈 wallBounceDamping 0.22→0.12、wallBounceMinSpeed 100→140。
+
+**v11 修正三項**：(1) 遊戲中設定頁——加黑色底板、開啟時依相機位置/縮放重新放置（修掉跑出畫面與尺寸錯誤），UI 滑鼠判定統一乘上 zoom（`GetUiAabb`），音量條在縮放關卡也能正確拖曳；(2) **死亡重置地圖**：`ResetLevelDynamics()`——碎裂磚動畫回第 0 幀並重新顯示、場上飛鋸清除、發射器計時回滿、旋轉鋸回起始角（重試節奏完全一致），於 `RespawnPlayer` 內與 `ResetBoss` 一併呼叫；(3) 碎裂磚改為**任意方向接觸觸發**（原本只有頂面）——左右側與底面碰撞、蹬牆都會啟動碎裂。
+
+**v10 重構（選單 UI，依原作五張截圖流程）**：新增 `WORLD_SELECT` 狀態與 `AppWorldSelect.cpp`。流程：標題 PRESS START（閃爍，Enter/Space 進入）→ 主選單（箭頭游標＋上下鍵導航：START GAME / SETTINGS / EXIT GAME）→ 世界地圖（CH#: THE FOREST 橫幅＋預覽圖＋左右切換世界）→ 關卡節點圖（紅梯形節點蛇形排列＋虛線連接＋Forest 末端 BOSS 骷髏節點，方向鍵沿路徑移動、底欄顯示「1-3 FOREST3」）→ 遊戲中 ESC 開「GAME PAUSED」選單（RESUME / RESTART LEVEL / EXIT TO MAP / SETTINGS / EXIT GAME，相機縮放自動補償）。鍵盤為主、滑鼠 hover/點擊保留。UI 素材由 outputs/gen_ui_assets.py 產生（原創簡化風格：面板、節點、骷髏、箭頭）。未實作：完成度%/繃帶數（無存檔系統，留待後續）。
+
+**v9 重構（角色移動物理，依《Super Meat Boy Jumps》影片方向）**：StepPlayer 由「瞬間到速」改為**加速度模型**——地面 groundAccel 4000 / 放開滑行 groundDecel 3000、空中 airAccel 2600 / airDecel 600（保留動量）；**非對稱重力** gravityUp -1500 / gravityDown -1900 ＋ 終端速度 650（下落更快、落地乾脆）；新增 **jumpBufferMs 90 / coyoteMs 70** 跳躍容錯。滿跳頂點維持 213px、滯空 1.12→1.08s、滿跳射程 325px，關卡 37 項驗收全過（跳坑斷言改以滿跳為基準）。所有參數在 gameplay.json player.movement。
+
 **v8 調整（掃掠半徑加大）**：S5 70→90、S3 60→80、S4 30→45、S6 25→40、S7 25→35。重新平衡：S5 時窗（0.72s）已小於穿越時間（0.88s），改以跳越為主策略（低點僅需 42px）；S3 最低點淨空 25px 仍任何相位可過；S4/S6 跳越最壞 182/122px；S7 鋸下沉更深、門內窗口反而加寬到 44px。37 項驗收全過。
 
 **v7 擴充（每組起始角）**：`RotorConfig` 加 `startAngleDeg`，來源為 TMX 旋轉鋸物件的 `rotation` 屬性（Tiled 順時針度數，載入時取負轉成遊戲 CCW；0°=旋臂朝右、90°=朝上）。現行配置：S5=0°、S3=90°、S4=200°、S6=270°、S7=135°。之後在 Tiled 直接旋轉該橢圓即可調整起始角，不需改程式。驗收 37 項全過。

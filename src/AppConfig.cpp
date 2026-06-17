@@ -183,8 +183,31 @@ void App::LoadGameConfig() {
                 m_Config.player.movement.wallSlideMaxFallSpeed =
                     movement.value("wallSlideMaxFallSpeed",
                                    m_Config.player.movement.wallSlideMaxFallSpeed);
+
+                m_Config.player.movement.groundAccel =
+                    movement.value("groundAccel", m_Config.player.movement.groundAccel);
+                m_Config.player.movement.groundDecel =
+                    movement.value("groundDecel", m_Config.player.movement.groundDecel);
+                m_Config.player.movement.airAccel =
+                    movement.value("airAccel", m_Config.player.movement.airAccel);
+                m_Config.player.movement.airDecel =
+                    movement.value("airDecel", m_Config.player.movement.airDecel);
+                m_Config.player.movement.jumpBufferMs =
+                    movement.value("jumpBufferMs", m_Config.player.movement.jumpBufferMs);
+                m_Config.player.movement.coyoteMs =
+                    movement.value("coyoteMs", m_Config.player.movement.coyoteMs);
+
+                // 舊欄位 gravity 同步進上下兩段，再被個別欄位覆寫
                 m_Config.player.movement.gravity =
                     movement.value("gravity", m_Config.player.movement.gravity);
+                m_Config.player.movement.gravityUp = m_Config.player.movement.gravity;
+                m_Config.player.movement.gravityDown = m_Config.player.movement.gravity;
+                m_Config.player.movement.gravityUp =
+                    movement.value("gravityUp", m_Config.player.movement.gravityUp);
+                m_Config.player.movement.gravityDown =
+                    movement.value("gravityDown", m_Config.player.movement.gravityDown);
+                m_Config.player.movement.maxFallSpeed =
+                    movement.value("maxFallSpeed", m_Config.player.movement.maxFallSpeed);
             }
 
             if (player.contains("animation") && player["animation"].is_object()) {

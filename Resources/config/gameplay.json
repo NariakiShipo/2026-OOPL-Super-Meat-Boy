@@ -153,8 +153,8 @@
       ]
     },
     "statusOffset": [
-      -500.0,
-      300.0
+      0.0,
+      310.0
     ],
     "levelClearText": "LEVEL CLEAR! \nPress N for next level."
   },
@@ -173,15 +173,23 @@
     "movement": {
       "moveSpeed": 300.0,
       "sprintMultiplier": 1.8,
-      "jumpVelocity": 500.0,
+      "groundAccel": 4000.0,
+      "groundDecel": 3000.0,
+      "airAccel": 2600.0,
+      "airDecel": 600.0,
+      "jumpVelocity": 200.0,
       "jumpHoldMaxMs": 170.0,
-      "jumpHoldBoost": 2000.0,
+      "jumpHoldBoost": 3500.0,
       "shortHopCutRatio": 0.42,
-      "wallJumpHorizontalVelocity": 430.0,
-      "wallJumpControlLockMs": 300.0,
+      "jumpBufferMs": 90.0,
+      "coyoteMs": 70.0,
+      "wallJumpHorizontalVelocity": 320.0,
+      "wallJumpControlLockMs": 130.0,
       "wallReattachCooldownMs": 110.0,
       "wallSlideMaxFallSpeed": 200.0,
-      "gravity": -1500.0
+      "gravityUp": -1500.0,
+      "gravityDown": -1900.0,
+      "maxFallSpeed": 650.0
     },
     "animation": {
       "airborneThreshold": 20.0,
@@ -202,8 +210,8 @@
     "zoomOutFactor": 0.7
   },
   "collision": {
-    "wallBounceMinSpeed": 100.0,
-    "wallBounceDamping": 0.22,
+    "wallBounceMinSpeed": 140.0,
+    "wallBounceDamping": 0.12,
     "breakableTopContactEpsilon": 0.5
   },
   "buzzsaw": {

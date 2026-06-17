@@ -21,7 +21,8 @@ void App::ResolvePlayerPlatformCollisions(const glm::vec2 &previousPosition) {
     const auto resolveAgainst = [&](const std::shared_ptr<Util::GameObject> &platform,
                                     bool *touchedTop = nullptr,
                                     const glm::vec2 *colliderSizeOverride = nullptr,
-                                    const bool useRelaxedTopCheck = false) {
+                                    const bool useRelaxedTopCheck = false,
+                                    bool *touchedAny = nullptr) {
         const auto platformAabb = (colliderSizeOverride != nullptr)
                                       ? Game::MakeAabb(platform->m_Transform.translation,
                                                        *colliderSizeOverride)
@@ -34,6 +35,11 @@ void App::ResolvePlayerPlatformCollisions(const glm::vec2 &previousPosition) {
 
         if (!Game::IsOverlap(playerAabb, platformAabb)) {
             return;
+        }
+
+        // 任何方向的實際接觸（頂/底/側）都回報，碎裂磚靠此觸發
+        if (touchedAny != nullptr) {
+            *touchedAny = true;
         }
 
         const float platformTop = platformPosition.y + platformHalf.y;
@@ -110,8 +116,11 @@ void App::ResolvePlayerPlatformCollisions(const glm::vec2 &previousPosition) {
         }
 
         bool touchedTop = false;
-        resolveAgainst(breakable.object, &touchedTop, &breakable.colliderSize, true);
-        if (touchedTop && !breakable.breaking) {
+        bool touchedAny = false;
+        resolveAgainst(breakable.object, &touchedTop, &breakable.colliderSize,
+                       true, &touchedAny);
+        // 任意方向接觸（頂/左右側/底）皆觸發碎裂
+        if ((touchedTop || touchedAny) && !breakable.breaking) {
             breakable.breaking = true;
             if (breakable.animation != nullptr) {
                 breakable.animation->Play();
@@ -119,7 +128,7 @@ void App::ResolvePlayerPlatformCollisions(const glm::vec2 &previousPosition) {
 
             const auto blockPos = breakable.object->m_Transform.translation;
             LOG_INFO(
-                "Breakable[{}] triggered from top contact. player=({}, {}), block=({}, {})",
+                "Breakable[{}] triggered from contact. player=({}, {}), block=({}, {})",
                 i,
                 m_Player->m_Transform.translation.x,
                 m_Player->m_Transform.translation.y,

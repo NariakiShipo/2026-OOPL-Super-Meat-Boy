@@ -29,10 +29,21 @@ void App::StepPlayer(const float dtMs) {
     const float currentMoveSpeed =
         sprinting ? movement.moveSpeed * movement.sprintMultiplier
                   : movement.moveSpeed;
+
+    // ── 水平：加速度模型（取代瞬間到速）──────────────────────
+    // 有輸入 → 朝目標速度加速；無輸入 → 摩擦減速（地面滑行短、空中保留動量）
     if (m_WallControlLockTimerMs > 0.0F) {
         m_WallControlLockTimerMs = std::max(0.0F, m_WallControlLockTimerMs - dtMs);
     } else {
-        m_PlayerVelocity.x = moveAxis * currentMoveSpeed;
+        const float targetSpeed = moveAxis * currentMoveSpeed;
+        const bool hasInput = (moveAxis != 0.0F);
+        const float accel =
+            m_PlayerOnGround
+                ? (hasInput ? movement.groundAccel : movement.groundDecel)
+                : (hasInput ? movement.airAccel : movement.airDecel);
+        const float maxStep = accel * dtSec;
+        const float deltaV = targetSpeed - m_PlayerVelocity.x;
+        m_PlayerVelocity.x += std::clamp(deltaV, -maxStep, maxStep);
     }
 
     const bool jumpPressed = Util::Input::IsKeyDown(Util::Keycode::SPACE) ||
@@ -42,10 +53,24 @@ void App::StepPlayer(const float dtMs) {
                           Util::Input::IsKeyPressed(Util::Keycode::W) ||
                           Util::Input::IsKeyPressed(Util::Keycode::UP);
 
+    // ── 跳躍容錯：input buffer + coyote time ─────────────────
+    if (jumpPressed) {
+        m_JumpBufferTimerMs = movement.jumpBufferMs;
+    } else {
+        m_JumpBufferTimerMs = std::max(0.0F, m_JumpBufferTimerMs - dtMs);
+    }
+    if (m_PlayerOnGround) {
+        m_CoyoteTimerMs = movement.coyoteMs;
+    } else {
+        m_CoyoteTimerMs = std::max(0.0F, m_CoyoteTimerMs - dtMs);
+    }
+
+    const bool wantJump = m_JumpBufferTimerMs > 0.0F;
+    const bool canGroundJump = m_PlayerOnGround || m_CoyoteTimerMs > 0.0F;
     const bool canWallJump = m_PlayerOnWall && !m_PlayerOnGround;
-    if ((m_PlayerOnGround || canWallJump) && jumpPressed) {
+    if ((canGroundJump || canWallJump) && wantJump) {
         m_PlayerVelocity.y = movement.jumpVelocity;
-        if (canWallJump) {
+        if (canWallJump && !canGroundJump) {
             m_PlayerVelocity.x =
                 movement.wallJumpHorizontalVelocity * m_WallJumpDirection;
             m_WallControlLockTimerMs = movement.wallJumpControlLockMs;
@@ -56,6 +81,8 @@ void App::StepPlayer(const float dtMs) {
         m_IsJumping = true;
         m_JumpHoldTimerMs = 0.0F;
         m_PlayerOnGround = false;
+        m_JumpBufferTimerMs = 0.0F;  // 消耗緩衝
+        m_CoyoteTimerMs = 0.0F;      // 消耗土狼時間
     }
 
     if (m_IsJumping && jumpHeld && m_JumpHoldTimerMs < movement.jumpHoldMaxMs) {
@@ -68,7 +95,13 @@ void App::StepPlayer(const float dtMs) {
         m_IsJumping = false;
     }
 
-    m_PlayerVelocity.y += movement.gravity * dtSec;
+    // ── 非對稱重力 + 終端速度（下落較快、落地乾脆）────────────
+    const float gravityNow = (m_PlayerVelocity.y > 0.0F) ? movement.gravityUp
+                                                         : movement.gravityDown;
+    m_PlayerVelocity.y += gravityNow * dtSec;
+    if (m_PlayerVelocity.y < -movement.maxFallSpeed) {
+        m_PlayerVelocity.y = -movement.maxFallSpeed;
+    }
 
     const auto previousPosition = m_Player->m_Transform.translation;
     m_Player->m_Transform.translation += m_PlayerVelocity * dtSec;

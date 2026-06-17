@@ -1,92 +1,90 @@
 #include "App.hpp"
 
+#include <algorithm>
+#include <cctype>
+#include <string>
+
 #include "common/AssetPath.hpp"
 
 #include "Util/Color.hpp"
 #include "Util/Image.hpp"
 #include "Util/Input.hpp"
+#include "Util/SFX.hpp"
 #include "Util/Text.hpp"
 #include "Util/TransformUtils.hpp"
 
-#include "game/Collision.hpp"
-
 #include "config.hpp"
+
+// 關卡節點圖：紅梯形節點蛇形排列（Forest 末端附 BOSS 骷髏節點）。
+// 方向鍵/AD 沿路徑移動、上下跳列、SPACE/ENTER 進入、ESC 回世界地圖。
+// 滑鼠 hover 可選、左鍵進入。
 
 namespace {
 
-// ── 版面常數 ────────────────────────────────────────────────
-// 圖片原始尺寸 640×480，遊戲座標系以畫面中心為 (0,0)。
-// game_x = pixel_x - 320,  game_y = 240 - pixel_y
+constexpr int kNodesPerRow = 5;
+constexpr float kNodeStartX = -480.0F;
+constexpr float kNodeStepX = 240.0F;
+constexpr float kNodeStartY = 110.0F;
+constexpr float kNodeStepY = -170.0F;
+constexpr glm::vec2 kNodeSize = {120.0F, 84.0F};
+constexpr float kNodeZ = 50.0F;
 
-// 關卡按鈕在圖片中的位置（pixel 座標，以各按鈕中心計）
-// 上排  1,2,3,4  (y_px ≈ 220)
-// 下排  8,7,6,5  (y_px ≈ 315)
-//   col:       1        2        3        4
-//   x_px:    105      250      390      540
-//
-// 轉換後的遊戲座標：
-//   上排 game_y = 240 - 220 =  +20
-//   下排 game_y = 240 - 315 =  -75
-
-struct LevelButtonLayout {
-  glm::vec2 pos;  // 遊戲座標 (game_x, game_y)
-  glm::vec2 size; // 點擊碰撞框大小 (pixels, 以 game 空間計)
-};
-
-// 按索引 0–7 對應關卡 1–8
-// 排列順序：1,2,3,4 上排；8,7,6,5 下排
-constexpr float kBtnHalfW = 65.0F; // 按鈕碰撞半寬
-constexpr float kBtnHalfH = 28.0F; // 按鈕碰撞半高
-
-// 全域偏移：背景圖被縮放到窗口大小，所以座標直接對應
-const std::array<LevelButtonLayout, 8> kForestBtnLayouts = {{
-    // 上排：level 1–4
-    {{-430.0F, 20.0F}, {kBtnHalfW * 4, kBtnHalfH * 2}}, // 1
-    {{-130.0F, 20.0F}, {kBtnHalfW * 4, kBtnHalfH * 2}}, // 2
-    {{170.0F, 20.0F}, {kBtnHalfW * 4, kBtnHalfH * 2}},  // 3
-    {{480.0F, 20.0F}, {kBtnHalfW * 4, kBtnHalfH * 2}},  // 4
-    // 下排：level 5–8（圖片上是 5 在右、8 在左）
-    {{480.0F, -150.0F}, {kBtnHalfW * 4, kBtnHalfH * 2}},  // 5
-    {{170.0F, -150.0F}, {kBtnHalfW * 4, kBtnHalfH * 2}},  // 6
-    {{-130.0F, -150.0F}, {kBtnHalfW * 4, kBtnHalfH * 2}}, // 7
-    {{-430.0F, -150.0F}, {kBtnHalfW * 4, kBtnHalfH * 2}}, // 8
-}};
-
-// Factory 版面與 Forest 相同，用同一份即可
-const std::array<LevelButtonLayout, 8> kFactoryBtnLayouts = {{
-    {{-460.0F, 60.0F}, {kBtnHalfW * 4, kBtnHalfH * 2}},
-    {{-160.0F, 60.0F}, {kBtnHalfW * 4, kBtnHalfH * 2}},
-    {{140.0F, 60.0F}, {kBtnHalfW * 4, kBtnHalfH * 2}},
-    {{440.0F, 60.0F}, {kBtnHalfW * 4, kBtnHalfH * 2}},
-    {{440.0F, -100.0F}, {kBtnHalfW * 4, kBtnHalfH * 2}},
-    {{140.0F, -100.0F}, {kBtnHalfW * 4, kBtnHalfH * 2}},
-    {{-160.0F, -100.0F}, {kBtnHalfW * 4, kBtnHalfH * 2}},
-    {{-460.0F, -100.0F}, {kBtnHalfW * 4, kBtnHalfH * 2}},
-}};
-
-// 分頁按鈕位置（往下移，讓文字不遮標題橫幅）
-constexpr float kTabY = 125.0F; // 往下移到畫面底部附近
-constexpr float kTabSpacing = 200.0F;
-constexpr float kTabZ = 120.0F;
-constexpr float kBtnZ = 130.0F;
-constexpr float kBgZ = -100.0F;
-constexpr float kBackZ = 130.0F;
-constexpr float kBackButtonY = -220.0F;
-
-// ── 工具函式 ────────────────────────────────────────────────
-
-bool IsCursorOver(const std::shared_ptr<Util::GameObject> &object) {
-  if (object == nullptr || object->GetDrawable() == nullptr) {
-    return false;
-  }
-  const auto cursor = Util::Input::GetCursorPosition();
-  const Game::Aabb bounds = Game::GetAabb(object);
-  return cursor.x >= bounds.minX && cursor.x <= bounds.maxX &&
-         cursor.y >= bounds.minY && cursor.y <= bounds.maxY;
+std::shared_ptr<Util::GameObject> MakeText(const std::string &text,
+                                           const int fontSize,
+                                           const glm::vec2 &position,
+                                           const float zIndex,
+                                           const Util::Color &color) {
+  auto object = std::make_shared<Util::GameObject>();
+  object->SetDrawable(std::make_shared<Util::Text>(
+      Common::ResolveAssetPath("fonts/Inter.ttf"), fontSize, text, color));
+  object->m_Transform.translation = position;
+  object->SetZIndex(zIndex);
+  return object;
 }
 
-// 用隱形 GameObject 作為碰撞框：尺寸由 scale 決定，drawable 不設定
-// 所以不會畫出任何東西，但 GetAabb 仍能正常計算
+std::shared_ptr<Util::GameObject> MakeImage(const std::string &relativePath,
+                                            const glm::vec2 &position,
+                                            const glm::vec2 &size,
+                                            const float zIndex) {
+  auto object = std::make_shared<Util::GameObject>();
+  auto image = std::make_shared<Util::Image>(Common::ResolveAssetPath(relativePath));
+  object->SetDrawable(image);
+  const auto textureSize = image->GetSize();
+  if (textureSize.x > 0.0F && textureSize.y > 0.0F) {
+    object->m_Transform.scale = {size.x / textureSize.x, size.y / textureSize.y};
+  }
+  object->m_Transform.translation = position;
+  object->SetZIndex(zIndex);
+  return object;
+}
+
+std::string UpperCase(std::string text) {
+  for (auto &ch : text) {
+    ch = static_cast<char>(std::toupper(static_cast<unsigned char>(ch)));
+  }
+  return text;
+}
+
+std::string LevelStem(const std::string &mapPath) {
+  const std::size_t slashPos = mapPath.find_last_of("/\\");
+  const std::size_t nameStart =
+      (slashPos == std::string::npos) ? 0 : (slashPos + 1);
+  const std::size_t dotPos = mapPath.find_last_of('.');
+  if (dotPos == std::string::npos || dotPos < nameStart) {
+    return mapPath.substr(nameStart);
+  }
+  return mapPath.substr(nameStart, dotPos - nameStart);
+}
+
+// 蛇形排列：偶數列左→右、奇數列右→左
+glm::vec2 SnakePosition(const int index) {
+  const int row = index / kNodesPerRow;
+  const int col = index % kNodesPerRow;
+  const int snakeCol = (row % 2 == 0) ? col : (kNodesPerRow - 1 - col);
+  return {kNodeStartX + static_cast<float>(snakeCol) * kNodeStepX,
+          kNodeStartY + static_cast<float>(row) * kNodeStepY};
+}
+
 bool IsCursorOverRegion(const glm::vec2 &center, const glm::vec2 &size) {
   const auto cursor = Util::Input::GetCursorPosition();
   return cursor.x >= center.x - size.x * 0.5F &&
@@ -95,147 +93,134 @@ bool IsCursorOverRegion(const glm::vec2 &center, const glm::vec2 &size) {
          cursor.y <= center.y + size.y * 0.5F;
 }
 
-void SetButtonColor(const std::shared_ptr<Util::GameObject> &btn,
-                    const Util::Color &color) {
-  if (btn == nullptr) {
-    return;
-  }
-  const auto text = std::dynamic_pointer_cast<Util::Text>(btn->GetDrawable());
-  if (text != nullptr) {
-    text->SetColor(color);
-  }
-}
-
-std::shared_ptr<Util::GameObject>
-MakeTextButton(const std::string &fontPath, const int fontSize,
-               const std::string &text, const glm::vec2 &pos,
-               const float zIndex,
-               const Util::Color &color = Util::Color(255, 255, 255, 255)) {
-  auto obj = std::make_shared<Util::GameObject>();
-  obj->SetDrawable(
-      std::make_shared<Util::Text>(fontPath, fontSize, text, color));
-  obj->m_Transform.translation = pos;
-  obj->SetZIndex(zIndex);
-  return obj;
-}
-
-const std::array<LevelButtonLayout, 8> &
-GetLayoutForWorld(const std::string &worldName) {
-  if (worldName == "Factory") {
-    return kFactoryBtnLayouts;
-  }
-  return kForestBtnLayouts;
-}
-
 } // namespace
 
-// ── ShowLevelSelectScreen ─────────────────────────────────────
 void App::ShowLevelSelectScreen() {
-  // 重置相機：關卡中會縮放相機，切回選關畫面需歸位
   Util::SetCameraZoom(1.0F);
   Util::SetCameraPosition({0.0F, 0.0F});
 
   m_Root = Util::Renderer();
   m_LevelSelectObjects.clear();
-  m_WorldTabButtons.clear();
-  m_LevelSelectButtons.clear();
+  m_LevelNodes.clear();
 
-  const std::string fontPath =
-      Common::ResolveAssetPath(m_Config.levelSelect.fontPath);
+  if (m_Worlds.empty()) {
+    return;
+  }
+  m_LevelSelectWorldIndex = m_LevelSelectWorldIndex % m_Worlds.size();
+  const auto &world = m_Worlds[m_LevelSelectWorldIndex];
 
-  // ── 背景圖（全屏縮放）────────────────────────────────────
-  {
-    const std::string &bgPath =
-        m_Worlds.empty() ? "" : m_Worlds[m_LevelSelectWorldIndex].bgImagePath;
+  // 世界全域起始 index（m_Levels 為各世界攤平 + 末端 boss 關）
+  std::size_t globalOffset = 0;
+  for (std::size_t wi = 0; wi < m_LevelSelectWorldIndex; ++wi) {
+    globalOffset += m_Worlds[wi].levels.size();
+  }
 
-    m_LevelSelectBackground = std::make_shared<Util::GameObject>();
-    if (!bgPath.empty()) {
-      const bool isAbsolute =
-          bgPath.front() == '/' || bgPath.find(':') != std::string::npos;
-      const std::string resolved =
-          isAbsolute ? bgPath : Common::ResolveAssetPath(bgPath);
-      auto img = std::make_shared<Util::Image>(resolved);
-      m_LevelSelectBackground->SetDrawable(img);
-      const auto imgSize = img->GetSize();
-      m_LevelSelectBackground->m_Transform.scale = {
-          static_cast<float>(WINDOW_WIDTH) / imgSize.x,
-          static_cast<float>(WINDOW_HEIGHT) / imgSize.y,
-      };
+  // 背景：世界圖滿版淡化 + 綠色頂/底橫幅
+  m_LevelSelectBackground = MakeImage(world.bgImagePath, {0.0F, 0.0F},
+                                      {static_cast<float>(WINDOW_WIDTH),
+                                       static_cast<float>(WINDOW_HEIGHT)},
+                                      -100.0F);
+  m_LevelSelectObjects.push_back(m_LevelSelectBackground);
+  m_LevelSelectObjects.push_back(
+      MakeImage("images/ui_panel.png", {0.0F, 0.0F},
+                {static_cast<float>(WINDOW_WIDTH),
+                 static_cast<float>(WINDOW_HEIGHT)},
+                -90.0F));  // 半透明壓暗
+
+  const bool hasBoss = (world.category == Game::WorldCategory::Forest) &&
+                       (m_BossTestLevelIndex < m_Levels.size());
+
+  // 頂部橫幅
+  m_LevelSelectObjects.push_back(MakeImage(
+      "images/ui_panel_green.png", {0.0F, 285.0F}, {1100.0F, 100.0F}, 100.0F));
+  const std::string chTitle =
+      "CH" + std::to_string(m_LevelSelectWorldIndex + 1) + ": THE " +
+      UpperCase(world.name);
+  m_LevelSelectTitle = MakeText(chTitle, 36, {0.0F, 298.0F}, 110.0F,
+                                Util::Color(30, 45, 20, 255));
+  m_LevelSelectObjects.push_back(m_LevelSelectTitle);
+  m_LevelSelectObjects.push_back(MakeText(
+      "LEVELS: " +
+          std::to_string(world.levels.size() + (hasBoss ? 1 : 0)),
+      20, {0.0F, 260.0F}, 110.0F, Util::Color(50, 70, 35, 255)));
+
+  // ── 關卡節點 ───────────────────────────────────────────────
+  const int levelCount = static_cast<int>(world.levels.size());
+  for (int i = 0; i < levelCount; ++i) {
+    LevelNode node;
+    node.position = SnakePosition(i);
+    node.globalLevelIndex = globalOffset + static_cast<std::size_t>(i);
+    node.displayName =
+        std::to_string(m_LevelSelectWorldIndex + 1) + "-" +
+        std::to_string(i + 1) + "  " +
+        UpperCase(LevelStem(world.levels[i].mapPath));
+    node.tile = MakeImage("images/ui_node.png", node.position, kNodeSize, kNodeZ);
+    node.label = MakeText(std::to_string(i + 1), 28,
+                          {node.position.x, node.position.y + 2.0F},
+                          kNodeZ + 1.0F, Util::Color(255, 255, 255, 255));
+    m_LevelSelectObjects.push_back(node.tile);
+    m_LevelSelectObjects.push_back(node.label);
+    m_LevelNodes.push_back(std::move(node));
+  }
+
+  if (hasBoss) {
+    LevelNode node;
+    node.position = SnakePosition(levelCount);
+    node.globalLevelIndex = m_BossTestLevelIndex;
+    node.displayName = "BOSS  LIL' SLUGGER";
+    node.tile = MakeImage("images/ui_node_boss.png", node.position, kNodeSize,
+                          kNodeZ);
+    node.label = nullptr;  // 骷髏臉已畫在貼圖上
+    m_LevelSelectObjects.push_back(node.tile);
+    m_LevelNodes.push_back(std::move(node));
+  }
+
+  // 節點間虛線連接
+  for (std::size_t i = 0; i + 1 < m_LevelNodes.size(); ++i) {
+    const auto &a = m_LevelNodes[i].position;
+    const auto &b = m_LevelNodes[i + 1].position;
+    const glm::vec2 delta = b - a;
+    const int dashes = 4;
+    for (int k = 1; k <= dashes; ++k) {
+      const float t = static_cast<float>(k) / (dashes + 1);
+      m_LevelSelectObjects.push_back(
+          MakeImage("images/ui_white.png", a + delta * t,
+                    {14.0F, 5.0F}, kNodeZ - 1.0F));
     }
-    m_LevelSelectBackground->SetZIndex(kBgZ);
-    m_LevelSelectObjects.push_back(m_LevelSelectBackground);
   }
 
-  // ── 世界分頁按鈕（文字，位置在畫面底部）──────────────────
-  const int numWorlds = static_cast<int>(m_Worlds.size());
-  for (int wi = 0; wi < numWorlds; ++wi) {
-    const float tabX = -kTabSpacing * 0.5F * (numWorlds - 1) + wi * kTabSpacing;
+  // 底部資訊欄 + 操作提示
+  m_LevelSelectObjects.push_back(MakeImage(
+      "images/ui_panel_green.png", {0.0F, -300.0F}, {1100.0F, 95.0F}, 100.0F));
+  m_LevelSelBottomText = MakeText("SELECT A LEVEL", 30, {0.0F, -290.0F}, 110.0F,
+                                  Util::Color(30, 45, 20, 255));
+  m_LevelSelectObjects.push_back(m_LevelSelBottomText);
+  m_LevelSelectObjects.push_back(
+      MakeText("[SPACE] SELECT", 20, {-460.0F, -325.0F}, 110.0F,
+               Util::Color(45, 60, 30, 255)));
+  m_LevelSelectObjects.push_back(
+      MakeText("[ESC] BACK", 20, {460.0F, -325.0F}, 110.0F,
+               Util::Color(45, 60, 30, 255)));
 
-    const bool isActive =
-        (static_cast<std::size_t>(wi) == m_LevelSelectWorldIndex);
-    const Util::Color tabColor = isActive ? Util::Color(255, 244, 100, 255)
-                                          : Util::Color(200, 200, 200, 255);
-
-    auto tab = MakeTextButton(fontPath, m_Config.levelSelect.tabFontSize,
-                              m_Worlds[wi].name, {tabX, kTabY},
-                              kTabZ, tabColor);
-    m_WorldTabButtons.push_back(tab);
-    m_LevelSelectObjects.push_back(tab);
+  for (const auto &object : m_LevelSelectObjects) {
+    m_Root.AddChild(object);
   }
 
-  // ── 隱形點擊區（對齊圖片中的關卡按鈕）─────────────────────
-  // 使用沒有 drawable 的 GameObject，靠 GetScaledSize / scale 作碰撞
-  // 但因為沒有 drawable 所以 GetAabb 不可靠，改用自訂 IsCursorOverRegion
-  // 因此這裡只存位置資訊，不實際創建 GameObject
-  // → m_LevelSelectButtons 在此版本存的是「不可見定位用」的 GameObject
-  //   （有 scale 讓 GetAabb 有正確大小，但沒有 drawable 所以不渲染）
-
-  m_LevelHoverOverlays.clear();
-
-  const auto &currentWorld =
-      m_Worlds.empty() ? Game::WorldData{} : m_Worlds[m_LevelSelectWorldIndex];
-  const int numLevels = static_cast<int>(currentWorld.levels.size());
-  const auto &layouts = GetLayoutForWorld(currentWorld.name);
-
-  for (int li = 0; li < numLevels && li < static_cast<int>(layouts.size());
-       ++li) {
-    // 碰撞代理（無 drawable，不渲染）
-    auto btn = std::make_shared<Util::GameObject>();
-    btn->m_Transform.translation = layouts[li].pos;
-    btn->m_Transform.scale = {layouts[li].size.x, layouts[li].size.y};
-    btn->SetZIndex(kBtnZ);
-    m_LevelSelectButtons.push_back(btn);
-  }
-
-  // ── BOSS 按鈕（Forest 第 9 格；只在 Forest 分頁顯示）────────
-  m_LevelSelectBossButton = nullptr;
-  if (!m_Worlds.empty() &&
-      m_Worlds[m_LevelSelectWorldIndex].category ==
-          Game::WorldCategory::Forest &&
-      m_BossTestLevelIndex < m_Levels.size()) {
-    m_LevelSelectBossButton =
-        MakeTextButton(fontPath, m_Config.levelSelect.bossFontSize,
-                       "BOSS", {480.0F, -240.0F}, kBtnZ,
-                       Util::Color(255, 130, 110, 255));
-    m_LevelSelectObjects.push_back(m_LevelSelectBossButton);
-  }
-
-  // ── Back 按鈕 ────────────────────────────────────────────
-  m_LevelSelectBackButton =
-      MakeTextButton(fontPath, m_Config.levelSelect.backFontSize,
-                     "back", {0.0F, kBackButtonY}, kBackZ,
-                     Util::Color(255, 255, 255, 255));
-  m_LevelSelectObjects.push_back(m_LevelSelectBackButton);
-
-  // ── 加入 Renderer ────────────────────────────────────────
-  for (const auto &obj : m_LevelSelectObjects) {
-    m_Root.AddChild(obj);
-  }
+  m_LevelNodeIndex = 0;
 }
 
-// ── UpdateLevelSelectScreen ───────────────────────────────────
 void App::UpdateLevelSelectScreen() {
-  // 除錯入口（步驟1）：按 B 直接進 Boss 測試關；之後改為 Forest 第 9 格按鈕
+  if (m_LevelNodes.empty()) {
+    if (Util::Input::IsKeyDown(Util::Keycode::ESCAPE)) {
+      ShowWorldSelectScreen();
+      m_CurrentState = State::WORLD_SELECT;
+    }
+    return;
+  }
+
+  const int nodeCount = static_cast<int>(m_LevelNodes.size());
+
+  // 除錯捷徑：B 直接進 Boss 關
   if (Util::Input::IsKeyDown(Util::Keycode::B) &&
       m_BossTestLevelIndex < m_Levels.size()) {
     LoadLevel(m_BossTestLevelIndex);
@@ -243,85 +228,82 @@ void App::UpdateLevelSelectScreen() {
     return;
   }
 
-  const Util::Color defaultColor(255, 255, 255, 255);
-  const Util::Color hoverColor(255, 244, 100, 255);
-  const Util::Color activeTabColor(255, 244, 100, 255);
-  const Util::Color inactiveTabColor(200, 200, 200, 255);
-
-  // ── 分頁按鈕 ─────────────────────────────────────────────
-  for (std::size_t wi = 0; wi < m_WorldTabButtons.size(); ++wi) {
-    const bool isActive = (wi == m_LevelSelectWorldIndex);
-    const bool hovered = IsCursorOver(m_WorldTabButtons[wi]);
-
-    SetButtonColor(m_WorldTabButtons[wi],
-                   isActive ? activeTabColor
-                            : (hovered ? hoverColor : inactiveTabColor));
-
-    if (hovered && !isActive &&
-        Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB)) {
-      m_LevelSelectWorldIndex = wi;
-      ShowLevelSelectScreen();
-      return;
-    }
+  // ── 鍵盤導航（沿蛇形路徑）─────────────────────────────────
+  bool confirm = false;
+  if (Util::Input::IsKeyDown(Util::Keycode::RIGHT) ||
+      Util::Input::IsKeyDown(Util::Keycode::D)) {
+    m_LevelNodeIndex = std::min(m_LevelNodeIndex + 1, nodeCount - 1);
+  }
+  if (Util::Input::IsKeyDown(Util::Keycode::LEFT) ||
+      Util::Input::IsKeyDown(Util::Keycode::A)) {
+    m_LevelNodeIndex = std::max(m_LevelNodeIndex - 1, 0);
+  }
+  if (Util::Input::IsKeyDown(Util::Keycode::DOWN) ||
+      Util::Input::IsKeyDown(Util::Keycode::S)) {
+    m_LevelNodeIndex = std::min(m_LevelNodeIndex + kNodesPerRow, nodeCount - 1);
+  }
+  if (Util::Input::IsKeyDown(Util::Keycode::UP) ||
+      Util::Input::IsKeyDown(Util::Keycode::W)) {
+    m_LevelNodeIndex = std::max(m_LevelNodeIndex - kNodesPerRow, 0);
+  }
+  if (Util::Input::IsKeyDown(Util::Keycode::SPACE) ||
+      Util::Input::IsKeyDown(Util::Keycode::RETURN)) {
+    confirm = true;
   }
 
-  // ── 關卡按鈕（點擊圖片上的區域）+ hover overlay ────────
-  const auto &currentWorld =
-      m_Worlds.empty() ? Game::WorldData{} : m_Worlds[m_LevelSelectWorldIndex];
-  const auto &layouts = GetLayoutForWorld(currentWorld.name);
-
-  for (std::size_t li = 0; li < m_LevelSelectButtons.size(); ++li) {
-    if (li >= layouts.size()) {
-      break;
-    }
-
-    const bool hovered = IsCursorOverRegion(layouts[li].pos, layouts[li].size);
-
-    if (hovered && Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB)) {
-      if (li < currentWorld.levels.size()) {
-        std::size_t globalOffset = 0;
-        for (std::size_t wi2 = 0; wi2 < m_LevelSelectWorldIndex; ++wi2) {
-          if (wi2 < m_Worlds.size()) {
-            globalOffset += m_Worlds[wi2].levels.size();
-          }
-        }
-        const std::size_t globalIdx = globalOffset + li;
-        if (globalIdx < m_Levels.size()) {
-          LoadLevel(globalIdx);
-          m_CurrentState = State::UPDATE;
-        }
+  // ── 滑鼠 hover / 點擊 ─────────────────────────────────────
+  for (int i = 0; i < nodeCount; ++i) {
+    if (IsCursorOverRegion(m_LevelNodes[i].position, kNodeSize)) {
+      m_LevelNodeIndex = i;
+      if (Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB)) {
+        confirm = true;
       }
-      return;
     }
   }
 
-  // ── BOSS 按鈕 ────────────────────────────────────────────
-  if (m_LevelSelectBossButton != nullptr) {
-    const bool bossHovered = IsCursorOver(m_LevelSelectBossButton);
-    SetButtonColor(m_LevelSelectBossButton,
-                   bossHovered ? hoverColor : Util::Color(255, 130, 110, 255));
-    if (bossHovered && Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB) &&
-        m_BossTestLevelIndex < m_Levels.size()) {
-      LoadLevel(m_BossTestLevelIndex);
+  // ── 視覺：選取節點放大、底欄顯示名稱 ──────────────────────
+  for (int i = 0; i < nodeCount; ++i) {
+    auto &node = m_LevelNodes[i];
+    const bool selected = (i == m_LevelNodeIndex);
+    const float baseScaleX = kNodeSize.x / 120.0F;  // ui_node 原始 120×84
+    const float baseScaleY = kNodeSize.y / 84.0F;
+    const float factor = selected ? 1.18F : 1.0F;
+    if (node.tile != nullptr) {
+      node.tile->m_Transform.scale = {baseScaleX * factor, baseScaleY * factor};
+    }
+    if (node.label != nullptr) {
+      const auto labelText =
+          std::dynamic_pointer_cast<Util::Text>(node.label->GetDrawable());
+      if (labelText != nullptr) {
+        labelText->SetColor(selected ? Util::Color(255, 244, 100, 255)
+                                     : Util::Color(255, 255, 255, 255));
+      }
+    }
+  }
+  if (m_LevelSelBottomText != nullptr) {
+    const auto bottomText = std::dynamic_pointer_cast<Util::Text>(
+        m_LevelSelBottomText->GetDrawable());
+    if (bottomText != nullptr) {
+      bottomText->SetText(m_LevelNodes[m_LevelNodeIndex].displayName);
+    }
+  }
+
+  if (confirm) {
+    const std::size_t globalIdx =
+        m_LevelNodes[m_LevelNodeIndex].globalLevelIndex;
+    if (globalIdx < m_Levels.size()) {
+      if (m_ButtonSFX != nullptr) {
+        m_ButtonSFX->Play();
+      }
+      LoadLevel(globalIdx);
       m_CurrentState = State::UPDATE;
-      return;
     }
-  }
-
-  // ── Back 按鈕 ────────────────────────────────────────────
-  const bool backHovered = IsCursorOver(m_LevelSelectBackButton);
-  SetButtonColor(m_LevelSelectBackButton,
-                 backHovered ? hoverColor : defaultColor);
-
-  if (backHovered && Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB)) {
-    m_CurrentState = State::TITLE;
-    ShowTitleScreen();
     return;
   }
 
   if (Util::Input::IsKeyDown(Util::Keycode::ESCAPE)) {
-    m_CurrentState = State::TITLE;
-    ShowTitleScreen();
+    ShowWorldSelectScreen();
+    m_CurrentState = State::WORLD_SELECT;
     return;
   }
 }

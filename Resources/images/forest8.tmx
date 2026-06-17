@@ -415,13 +415,13 @@
   <object id="102" x="280" y="420" width="20" height="160"/>
  </objectgroup>
  <objectgroup id="5" name="saws">
-  <object id="7" x="102.667" y="462.333" width="70" height="70">
+  <object id="7" x="100.843" y="497.894" width="70" height="70">
    <ellipse/>
   </object>
   <object id="8" x="104" y="667.667" width="70" height="70">
    <ellipse/>
   </object>
-  <object id="11" x="94.6473" y="287.647" width="92.7054" height="92.7054">
+  <object id="11" x="106.501" y="292.206" width="67.1743" height="61.7033">
    <ellipse/>
   </object>
   <object id="16" x="221.333" y="385.667" width="60" height="60">
@@ -433,7 +433,7 @@
   <object id="21" x="109" y="181" width="20" height="20">
    <ellipse/>
   </object>
-  <object id="22" x="9" y="219.667" width="60" height="60">
+  <object id="22" x="7.17635" y="219.667" width="60" height="60">
    <ellipse/>
   </object>
   <object id="73" x="425" y="760" width="40" height="40">
