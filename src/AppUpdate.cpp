@@ -15,8 +15,15 @@ void App::Update() {
 
     bool shouldUpdateGameplay = true;
 
-    // 選單層級：設定（最上）→ 暫停 → 遊戲
-    if (m_SettingsMenuVisible) {
+    // 選單層級：角色選擇（最上）→ 設定 → 暫停 → 遊戲
+    if (m_CharacterSelectVisible) {
+        if (Util::Input::IsKeyDown(Util::Keycode::ESCAPE)) {
+            CloseCharacterSelect();  // 關閉角色選擇 → 回到暫停選單
+        } else {
+            UpdateCharacterSelect();
+        }
+        shouldUpdateGameplay = false;
+    } else if (m_SettingsMenuVisible) {
         if (Util::Input::IsKeyDown(Util::Keycode::F1) ||
             Util::Input::IsKeyDown(Util::Keycode::ESCAPE)) {
             CloseSettingsMenu();  // 關閉設定 → 回到暫停選單
@@ -36,6 +43,8 @@ void App::Update() {
         OpenPauseMenu();
         shouldUpdateGameplay = false;
     } else if (m_LevelCleared) {
+        const auto dtMs = std::max(Util::Time::GetDeltaTimeMs(), 1.0F);
+        UpdateVictoryCamera(dtMs);  // 通關鏡頭：放大聚焦主角與終點
         if (Util::Input::IsKeyDown(Util::Keycode::N)) {
             LoadLevel((m_CurrentLevelIndex + 1) % m_Levels.size());
         }

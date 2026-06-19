@@ -89,6 +89,7 @@ void App::RespawnPlayer() {
     ApplyPlayerDrawable(m_PlayerIdleDrawable);
     m_LevelCleared = false;
     m_LevelTimeMs = 0.0F;  // 每次重生（含死亡重試）重新計時
+    HideLevelCompleteUI();  // 還原 HUD、隱藏通關畫面
     if (m_StatusText != nullptr) {
         //m_StatusText->SetText("Reach the flag. Avoid red blocks.");
     }

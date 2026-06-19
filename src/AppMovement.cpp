@@ -173,10 +173,8 @@ void App::StepPlayer(const float dtMs) {
             m_PlayerVelocity = {0.0F, 0.0F};
             m_PlayerAnimState = PlayerAnimState::IDLE;
             ApplyPlayerDrawable(m_PlayerIdleDrawable);
-            if (m_StatusText != nullptr) {
-                    m_StatusText->SetText(m_Config.ui.levelClearText);
-            }
-            BankLevelBandages();  // 本關已收集的繃帶計入全域總數
+            BankLevelBandages();    // 本關已收集的繃帶計入全域總數
+            TriggerLevelComplete();  // 評分 + 顯示通關畫面 + 設定通關鏡頭
             LOG_INFO("Level clear!");
         }
     }

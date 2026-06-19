@@ -99,28 +99,58 @@ std::shared_ptr<Util::GameObject> App::CreatePlatform(const glm::vec2 &position,
     return platform;
 }
 
+// 通關畫面 UI：上下黑邊（cinematic）+ LEVEL COMPLETE + GRADE + 提示。
+// 一次建立、預設隱藏；過關時由 TriggerLevelComplete 顯示。
+void App::BuildLevelCompleteUI() {
+    m_LevelCompleteObjects.clear();
+
+    const std::string font =
+        Common::ResolveAssetPath(m_Config.ui.statusText.fontPath);
+
+    // 上下黑邊（letterbox）
+    m_LevelCompleteObjects.push_back(CreatePlatform(
+        {0.0F, 322.0F}, {1400.0F, 150.0F}, 215.0F, "images/ui_panel.png"));
+    m_LevelCompleteObjects.push_back(CreatePlatform(
+        {0.0F, -322.0F}, {1400.0F, 150.0F}, 215.0F, "images/ui_panel.png"));
+
+    m_LevelCompleteObjects.push_back(CreateTextObject(
+        font, 52, "LEVEL COMPLETE", {0.0F, 312.0F}, 220.0F,
+        Util::Color(255, 255, 255, 255)));
+
+    m_GradeText = CreateTextObject(font, 66, "GRADE A+", {0.0F, 150.0F}, 220.0F,
+                                   Util::Color(220, 40, 40, 255));
+    m_LevelCompleteObjects.push_back(m_GradeText);
+
+    m_LevelCompleteObjects.push_back(CreateTextObject(
+        font, 24, "PRESS N FOR NEXT LEVEL", {0.0F, -322.0F}, 220.0F,
+        Util::Color(230, 230, 230, 255)));
+
+    // 記錄各元素的螢幕偏移（通關鏡頭移動時用來跟隨）
+    m_LevelCompleteBaseOffsets.clear();
+    for (const auto &object : m_LevelCompleteObjects) {
+        m_LevelCompleteBaseOffsets.push_back(
+            object != nullptr ? object->m_Transform.translation
+                              : glm::vec2{0.0F, 0.0F});
+        if (object != nullptr) {
+            object->SetVisible(false);
+        }
+    }
+}
+
 void App::InitWorld() {
     LoadGameConfig();
     m_Root = Util::Renderer();
 
     m_Player = std::make_shared<Util::GameObject>();
-
-    m_PlayerIdleDrawable = std::make_shared<Util::Image>(
-        Common::ResolveAssetPath(m_Config.player.idleSpritePath));
-    m_PlayerRunLeftDrawable = std::make_shared<Util::Image>(
-        Common::ResolveAssetPath(m_Config.player.runLeftSpritePath));
-    m_PlayerRunRightDrawable = std::make_shared<Util::Image>(
-        Common::ResolveAssetPath(m_Config.player.runRightSpritePath));
-
-    m_PlayerJumpDrawable = m_PlayerIdleDrawable;
-    m_PlayerFallDrawable = m_PlayerIdleDrawable;
-
-    m_Player->SetDrawable(m_PlayerIdleDrawable);
-    m_PlayerAnimState = PlayerAnimState::IDLE;
-    m_PlayerFacingRight = true;
     m_Player->m_Transform.scale = {m_Config.player.scale, m_Config.player.scale};
-    m_PlayerColliderSize = m_PlayerIdleDrawable->GetSize() * m_Player->m_Transform.scale;
     m_Player->SetZIndex(m_Config.player.zIndex);
+    m_PlayerFacingRight = true;
+
+    // 角色系統：建立清單 → 讀取進度（繃帶總數 + 所選角色）→ 套用所選角色貼圖。
+    m_ProgressPath = std::filesystem::current_path() / "player_progress.txt";
+    InitCharacters();
+    LoadProgress();
+    ApplyCharacterToPlayer();
 
     m_StatusBoard = std::make_shared<Util::GameObject>();
     m_StatusText = std::make_shared<Util::Text>(
@@ -273,6 +303,8 @@ void App::InitWorld() {
     m_TitleBGM->Play(-1);
 
     BuildPauseMenu();
+    BuildCharacterSelect();
+    BuildLevelCompleteUI();
 
     m_Worlds = Game::BuildWorldData();
     m_Levels = Game::BuildDefaultLevels();
@@ -419,6 +451,7 @@ void App::LoadLevel(const std::size_t levelIndex) {
     m_PlayerSpawn = level.spawn;
     m_WorldBoundsMin = level.worldBoundsMin;
     m_WorldBoundsMax = level.worldBoundsMax;
+    m_GradeThresholdSec = ComputeGradeThresholdSec(level.mapPixelSize);
     m_CameraLookaheadOffset = {0.0F, 0.0F};
 
     const float zoomX = (level.mapPixelSize.x > 0.0F)

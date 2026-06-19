@@ -233,8 +233,8 @@ void App::ShowTitleScreen() {
     m_TitleMenuPanel = MakeImage("images/ui_panel.png", {300.0F, -60.0F},
                                  {560.0F, 380.0F}, 120.0F);
     m_TitleMenuItems.clear();
-    const std::array<std::string, 3> labels = {"START GAME", "SETTINGS",
-                                               "EXIT GAME"};
+    const std::array<std::string, 4> labels = {"START GAME", "CHARACTERS",
+                                               "SETTINGS", "EXIT GAME"};
     for (std::size_t i = 0; i < labels.size(); ++i) {
         m_TitleMenuItems.push_back(
             MakeText(labels[i], 38,
@@ -244,7 +244,7 @@ void App::ShowTitleScreen() {
     m_TitleMenuArrow = MakeImage("images/ui_arrow.png", {120.0F, 40.0F},
                                  {44.0F, 30.0F}, 130.0F);
     m_TitleHintText = MakeText("[SPACE] SELECT    [ESC] BACK", 20,
-                               {300.0F, -210.0F}, 130.0F,
+                               {300.0F, -240.0F}, 130.0F,
                                Util::Color(200, 200, 200, 255));
     m_Root.AddChild(m_TitleMenuPanel);
     for (const auto &item : m_TitleMenuItems) {
@@ -254,6 +254,9 @@ void App::ShowTitleScreen() {
     m_Root.AddChild(m_TitleHintText);
 
     for (const auto &object : m_SettingsObjects) {
+        m_Root.AddChild(object);
+    }
+    for (const auto &object : m_CharacterSelectObjects) {
         m_Root.AddChild(object);
     }
 
@@ -368,7 +371,13 @@ void App::ShowGameplayScreen() {
     if (m_CheatIndicator != nullptr) {
         m_Root.AddChild(m_CheatIndicator);
     }
+    for (const auto &object : m_LevelCompleteObjects) {
+        m_Root.AddChild(object);
+    }
     for (const auto &object : m_SettingsObjects) {
+        m_Root.AddChild(object);
+    }
+    for (const auto &object : m_CharacterSelectObjects) {
         m_Root.AddChild(object);
     }
     for (const auto &object : m_PauseObjects) {
@@ -501,8 +510,9 @@ void App::UpdateTitleScreen() {
     if (confirm) {
         switch (m_TitleMenuIndex) {
         case 0: StartGame(); break;
-        case 1: OpenSettingsMenu(); break;
-        case 2: m_CurrentState = State::END; break;
+        case 1: OpenCharacterSelect(); break;
+        case 2: OpenSettingsMenu(); break;
+        case 3: m_CurrentState = State::END; break;
         default: break;
         }
         return;
@@ -582,7 +592,13 @@ void App::UpdateSettingsMenu() {
 }
 
 void App::Title() {
-    if (m_SettingsMenuVisible &&
+    if (m_CharacterSelectVisible &&
+        (Util::Input::IsKeyDown(Util::Keycode::F1) ||
+         Util::Input::IsKeyDown(Util::Keycode::ESCAPE))) {
+        CloseCharacterSelect();
+    } else if (m_CharacterSelectVisible) {
+        UpdateCharacterSelect();
+    } else if (m_SettingsMenuVisible &&
         (Util::Input::IsKeyDown(Util::Keycode::F1) ||
          Util::Input::IsKeyDown(Util::Keycode::ESCAPE))) {
         CloseSettingsMenu();
@@ -608,8 +624,9 @@ void App::Title() {
 
 // ── 暫停選單（GAME PAUSED）──────────────────────────────────
 namespace {
-constexpr std::array<const char *, 5> kPauseLabels = {
-    "RESUME GAME", "RESTART LEVEL", "EXIT TO MAP", "SETTINGS", "EXIT GAME"};
+constexpr std::array<const char *, 6> kPauseLabels = {
+    "RESUME GAME", "RESTART LEVEL", "EXIT TO MAP",
+    "CHANGE CHARACTER", "SETTINGS", "EXIT GAME"};
 constexpr float kPauseItemStartY = 110.0F;
 constexpr float kPauseItemStepY = 75.0F;
 } // namespace
@@ -731,13 +748,250 @@ void App::UpdatePauseMenu() {
         ShowLevelSelectScreen();
         m_CurrentState = State::LEVEL_SELECT;
         break;
-    case 3:  // SETTINGS
+    case 3:  // CHANGE CHARACTER
+        OpenCharacterSelect();
+        break;
+    case 4:  // SETTINGS
         OpenSettingsMenu();
         break;
-    case 4:  // EXIT GAME
+    case 5:  // EXIT GAME
         m_CurrentState = State::END;
         break;
     default:
         break;
+    }
+}
+
+// ── 角色選擇（CHANGE CHARACTER）────────────────────────────
+namespace {
+constexpr float kCharPreviewHeight = 300.0F;  // 預覽圖等比縮放的目標高度
+}  // namespace
+
+void App::BuildCharacterSelect() {
+    m_CharacterSelectObjects.clear();
+    m_CharacterPreviewImages.clear();
+
+    // 預載每個角色的 idle 圖作為中央預覽
+    for (const auto &ch : m_Characters) {
+        m_CharacterPreviewImages.push_back(std::make_shared<Util::Image>(
+            Common::ResolveAssetPath(ch.idleSpritePath)));
+    }
+
+    m_CharacterSelectObjects.push_back(
+        MakeImage("images/ui_panel.png", {0.0F, 0.0F}, {1400.0F, 800.0F}, 200.0F));
+    m_CharacterSelectObjects.push_back(
+        MakeText("CHANGE CHARACTER", 48, {0.0F, 300.0F}, 210.0F,
+                 Util::Color(255, 255, 255, 255)));
+
+    // 左上角繃帶圖示 + 數量
+    m_CharacterSelectObjects.push_back(MakeImage(
+        "images/bandage.png", {-600.0F, 318.0F}, {40.0F, 40.0F}, 211.0F));
+    m_CharacterBandageText = MakeText("X 0", 30, {-535.0F, 318.0F}, 211.0F,
+                                      Util::Color(255, 255, 255, 255));
+    m_CharacterSelectObjects.push_back(m_CharacterBandageText);
+
+    // 中央大預覽（drawable / scale 於 RefreshCharacterSelect 設定）
+    m_CharacterPreview = std::make_shared<Util::GameObject>();
+    if (!m_CharacterPreviewImages.empty()) {
+        m_CharacterPreview->SetDrawable(m_CharacterPreviewImages.front());
+    }
+    m_CharacterPreview->m_Transform.translation = {0.0F, 60.0F};
+    m_CharacterPreview->SetZIndex(210.0F);
+    m_CharacterSelectObjects.push_back(m_CharacterPreview);
+
+    m_CharacterNameText = MakeText("", 40, {0.0F, -150.0F}, 211.0F,
+                                   Util::Color(255, 210, 110, 255));
+    m_CharacterSelectObjects.push_back(m_CharacterNameText);
+
+    m_CharacterLockText = MakeText("", 22, {0.0F, -198.0F}, 212.0F,
+                                   Util::Color(255, 120, 120, 255));
+    m_CharacterSelectObjects.push_back(m_CharacterLockText);
+
+    m_CharacterDescText = MakeText("", 22, {0.0F, -250.0F}, 211.0F,
+                                   Util::Color(220, 220, 220, 255));
+    m_CharacterSelectObjects.push_back(m_CharacterDescText);
+
+    m_CharacterLeftArrow = MakeImage("images/ui_arrow.png", {-360.0F, 60.0F},
+                                     {64.0F, 44.0F}, 211.0F);
+    m_CharacterLeftArrow->m_Transform.scale.x *= -1.0F;  // 翻轉指向左
+    m_CharacterSelectObjects.push_back(m_CharacterLeftArrow);
+
+    m_CharacterRightArrow = MakeImage("images/ui_arrow.png", {360.0F, 60.0F},
+                                      {64.0F, 44.0F}, 211.0F);
+    m_CharacterSelectObjects.push_back(m_CharacterRightArrow);
+
+    m_CharacterSelectObjects.push_back(
+        MakeText("[A/D] BROWSE    [SPACE] SELECT    [ESC] BACK", 20,
+                 {0.0F, -312.0F}, 211.0F, Util::Color(200, 200, 200, 255)));
+
+    // 記錄基準 transform 供 OpenCharacterSelect 依相機重新放置
+    m_CharacterSelectBasePositions.clear();
+    m_CharacterSelectBaseScales.clear();
+    for (const auto &object : m_CharacterSelectObjects) {
+        m_CharacterSelectBasePositions.push_back(
+            object != nullptr ? object->m_Transform.translation
+                              : glm::vec2{0.0F, 0.0F});
+        m_CharacterSelectBaseScales.push_back(
+            object != nullptr ? object->m_Transform.scale : glm::vec2{1.0F, 1.0F});
+    }
+
+    SetVisibleObjects(m_CharacterSelectObjects, false);
+}
+
+void App::RefreshCharacterSelect() {
+    const int count = static_cast<int>(m_Characters.size());
+    if (count == 0) {
+        return;
+    }
+    m_CharacterBrowseIndex = (m_CharacterBrowseIndex % count + count) % count;
+    const int idx = m_CharacterBrowseIndex;
+    const auto &ch = m_Characters[idx];
+    const bool unlocked = IsCharacterUnlocked(idx);
+
+    if (m_CharacterPreview != nullptr &&
+        idx < static_cast<int>(m_CharacterPreviewImages.size()) &&
+        m_CharacterPreviewImages[idx] != nullptr) {
+        m_CharacterPreview->SetDrawable(m_CharacterPreviewImages[idx]);
+        const auto size = m_CharacterPreviewImages[idx]->GetSize();
+        if (size.y > 0.0F) {
+            const float scale = kCharPreviewHeight / size.y;
+            m_CharacterPreview->m_Transform.scale = {scale, scale};
+        }
+    }
+
+    const auto name = GetTextDrawable(m_CharacterNameText);
+    if (name != nullptr) {
+        name->SetText(ch.name);
+        name->SetColor(unlocked ? Util::Color(255, 210, 110, 255)
+                                : Util::Color(150, 150, 150, 255));
+    }
+    const auto desc = GetTextDrawable(m_CharacterDescText);
+    if (desc != nullptr) {
+        desc->SetText(ch.description);
+    }
+    const auto lock = GetTextDrawable(m_CharacterLockText);
+    if (lock != nullptr) {
+        if (!unlocked) {
+            lock->SetText("LOCKED - NEED " + std::to_string(ch.unlockCost) +
+                          " BANDAGES (HAVE " +
+                          std::to_string(m_BandagesCollected) + ")");
+            lock->SetColor(Util::Color(255, 120, 120, 255));
+        } else if (idx == m_SelectedCharacter) {
+            lock->SetText("CURRENTLY SELECTED");
+            lock->SetColor(Util::Color(140, 230, 140, 255));
+        } else {
+            lock->SetText("PRESS [SPACE] TO SELECT");
+            lock->SetColor(Util::Color(255, 255, 255, 255));
+        }
+    }
+    const auto bandage = GetTextDrawable(m_CharacterBandageText);
+    if (bandage != nullptr) {
+        bandage->SetText("X " + std::to_string(m_BandagesCollected));
+    }
+}
+
+void App::OpenCharacterSelect() {
+    m_CharacterSelectVisible = true;
+    m_CharacterBrowseIndex = m_SelectedCharacter;
+
+    const glm::vec2 camPos = Util::GetCameraPosition();
+    for (std::size_t i = 0; i < m_CharacterSelectObjects.size() &&
+                            i < m_CharacterSelectBasePositions.size(); ++i) {
+        if (m_CharacterSelectObjects[i] == nullptr) {
+            continue;
+        }
+        m_CharacterSelectObjects[i]->m_Transform.translation =
+            camPos + m_CharacterSelectBasePositions[i];
+        m_CharacterSelectObjects[i]->m_Transform.scale =
+            m_CharacterSelectBaseScales[i];
+    }
+    SetVisibleObjects(m_CharacterSelectObjects, true);
+
+    // 隱藏底下的選單，關閉時還原
+    if (m_CurrentState == State::TITLE) {
+        for (const auto &item : m_TitleMenuItems) {
+            if (item != nullptr) {
+                item->SetVisible(false);
+            }
+        }
+        if (m_TitleMenuArrow != nullptr) {
+            m_TitleMenuArrow->SetVisible(false);
+        }
+        if (m_TitleHintText != nullptr) {
+            m_TitleHintText->SetVisible(false);
+        }
+    } else if (m_CurrentState == State::UPDATE) {
+        SetVisibleObjects(m_PauseObjects, false);
+    }
+
+    RefreshCharacterSelect();
+    if (m_ButtonSFX != nullptr) {
+        m_ButtonSFX->Play();
+    }
+}
+
+void App::CloseCharacterSelect() {
+    m_CharacterSelectVisible = false;
+    SetVisibleObjects(m_CharacterSelectObjects, false);
+
+    if (m_CurrentState == State::TITLE) {
+        SetTitlePhase(TitlePhase::MENU);  // 還原標題主選單
+    } else if (m_CurrentState == State::UPDATE && m_PauseMenuVisible) {
+        SetVisibleObjects(m_PauseObjects, true);  // 還原暫停選單
+    }
+    if (m_ButtonSFX != nullptr) {
+        m_ButtonSFX->Play();
+    }
+}
+
+void App::UpdateCharacterSelect() {
+    const int count = static_cast<int>(m_Characters.size());
+    if (count == 0) {
+        return;
+    }
+
+    bool browseChanged = false;
+    if (Util::Input::IsKeyDown(Util::Keycode::LEFT) ||
+        Util::Input::IsKeyDown(Util::Keycode::A)) {
+        --m_CharacterBrowseIndex;
+        browseChanged = true;
+    }
+    if (Util::Input::IsKeyDown(Util::Keycode::RIGHT) ||
+        Util::Input::IsKeyDown(Util::Keycode::D)) {
+        ++m_CharacterBrowseIndex;
+        browseChanged = true;
+    }
+
+    bool selectPressed = Util::Input::IsKeyDown(Util::Keycode::SPACE) ||
+                         Util::Input::IsKeyDown(Util::Keycode::RETURN);
+
+    if (Util::Input::IsKeyDown(Util::Keycode::MOUSE_LB)) {
+        if (IsCursorOver(m_CharacterLeftArrow)) {
+            --m_CharacterBrowseIndex;
+            browseChanged = true;
+        } else if (IsCursorOver(m_CharacterRightArrow)) {
+            ++m_CharacterBrowseIndex;
+            browseChanged = true;
+        } else if (IsCursorOver(m_CharacterPreview)) {
+            selectPressed = true;
+        }
+    }
+
+    if (browseChanged) {
+        m_CharacterBrowseIndex = (m_CharacterBrowseIndex % count + count) % count;
+        RefreshCharacterSelect();
+        if (m_ButtonSFX != nullptr) {
+            m_ButtonSFX->Play();
+        }
+    }
+
+    if (selectPressed && IsCharacterUnlocked(m_CharacterBrowseIndex)) {
+        m_SelectedCharacter = m_CharacterBrowseIndex;
+        ApplyCharacterToPlayer();
+        SaveProgress();
+        RefreshCharacterSelect();
+        if (m_ButtonSFX != nullptr) {
+            m_ButtonSFX->Play();
+        }
     }
 }

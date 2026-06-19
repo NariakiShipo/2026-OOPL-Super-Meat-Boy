@@ -12,6 +12,7 @@ set(SRC_FILES
     AppBoss.cpp
     AppRotor.cpp
     AppBandage.cpp
+    AppCharacter.cpp
     AppUpdate.cpp
     AppEnd.cpp
     common/AssetPath.cpp

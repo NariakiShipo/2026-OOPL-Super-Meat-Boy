@@ -72,6 +72,7 @@ void App::ResetBandages() {
 void App::BankLevelBandages() {
     const int collected = CollectedBandageCount();
     m_BandagesCollected += collected;
+    SaveProgress();  // 繃帶總數寫入存檔（角色解鎖門檻依此判定）
     LOG_INFO("Banked {} bandages this level (global total {})", collected,
              m_BandagesCollected);
 }

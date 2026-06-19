@@ -494,3 +494,7 @@ lib/
 
 # Doxygen generated files
 docs/html/
+
+# Player local save data
+player_progress.txt
+audio_settings.txt

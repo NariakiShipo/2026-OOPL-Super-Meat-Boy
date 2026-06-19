@@ -124,6 +124,25 @@ private:
     void UpdateHud();       // 每幀更新計時器與繃帶數量文字
     int CollectedBandageCount() const;  // 本關已收集的繃帶數
 
+    // 角色解鎖 + 角色選擇 UI（AppCharacter.cpp）
+    void InitCharacters();              // 填預設角色清單、套用已選角色
+    void ApplyCharacterToPlayer();      // 把目前所選角色的貼圖套到主角
+    bool IsCharacterUnlocked(int index) const;  // 累積繃帶 >= 解鎖門檻
+    void BuildCharacterSelect();        // 建立角色選擇 UI（一次）
+    void OpenCharacterSelect();
+    void CloseCharacterSelect();
+    void UpdateCharacterSelect();
+    void RefreshCharacterSelect();      // 依瀏覽中的角色刷新預覽/名稱/描述/鎖
+    void LoadProgress();                // 讀取繃帶總數 + 所選角色
+    void SaveProgress() const;
+
+    // 通關畫面 + 評分 + 通關鏡頭
+    void BuildLevelCompleteUI();        // 建立通關 UI（一次）
+    float ComputeGradeThresholdSec(const glm::vec2 &mapPixelSize) const;
+    void TriggerLevelComplete();        // 過關當下：判定成績、顯示 UI、設定鏡頭目標
+    void UpdateVictoryCamera(float dtMs);  // 過關後每幀：鏡頭放大聚焦 + UI 跟隨
+    void HideLevelCompleteUI();         // 重生/載入新關時隱藏通關 UI、還原 HUD
+
 private:
     struct UiTextSpec {
         std::string fontPath = "fonts/BlackOpsOne-Regular.ttf";
@@ -235,7 +254,7 @@ private:
             "fonts/BlackOpsOne-Regular.ttf",
             28,
             "TIME 0.00",
-            {-560.0F, 330.0F},
+            {-460.0F, 330.0F},
             100.0F,
             Util::Color(255, 255, 255, 255),
         };
@@ -243,7 +262,7 @@ private:
             "fonts/BlackOpsOne-Regular.ttf",
             28,
             "BANDAGE 0/0",
-            {-560.0F, 292.0F},
+            {-460.0F, 292.0F},
             100.0F,
             Util::Color(255, 190, 210, 255),
         };
@@ -354,11 +373,27 @@ private:
     };
 
     struct BandageConfig {
-        // 收集品貼圖。預設先沿用 bandagegirl.png 當 placeholder（小尺寸區隔終點），
-        // 之後可換成專屬的繃帶圖並改這裡。
-        std::string texturePath = "images/bandagegirl.png";
+        std::string texturePath = "images/bandage.png";
         glm::vec2 size = {28.0F, 28.0F};
         float zIndex = 4.0F;
+    };
+
+    // 可解鎖角色定義（細節存於 gameplay.json 的 characters 陣列）。
+    struct CharacterDef {
+        std::string name = "MEAT BOY";
+        std::string description;
+        std::string idleSpritePath;
+        std::string runLeftSpritePath;
+        std::string runRightSpritePath;
+        int unlockCost = 0;  // 解鎖所需的累積繃帶數（0 = 一開始就解鎖）
+    };
+
+    // 通關評分 + 通關鏡頭設定。
+    struct GradingConfig {
+        float pixelsPerSecond = 180.0F;  // A+ 門檻 = 地圖(寬+高)/此值（秒）
+        float minSeconds = 4.0F;         // 門檻下限
+        float victoryZoomFactor = 2.0F;  // 通關時鏡頭放大倍率
+        float victoryCameraLerp = 4.0F;  // 通關鏡頭收束速度（每秒）
     };
 
     struct GameplayConfig {
@@ -372,6 +407,8 @@ private:
         BossConfig boss;
         RotorTuningConfig rotor;
         BandageConfig bandage;
+        GradingConfig grading;
+        std::vector<CharacterDef> characters;  // 角色清單（空 → 由程式填預設）
         float goalSizeScale = 0.9F;
     };
 
@@ -527,6 +564,31 @@ private:
     std::shared_ptr<Util::GameObject> m_TimerText;        // HUD：計時器
     std::shared_ptr<Util::GameObject> m_BandageCountText; // HUD：繃帶數量
 
+    // 通關畫面 + 評分 + 通關鏡頭
+    float m_GradeThresholdSec = 0.0F;   // 本關 A+ 門檻秒數（載入時依地圖大小算）
+    std::vector<std::shared_ptr<Util::GameObject>> m_LevelCompleteObjects;
+    std::vector<glm::vec2> m_LevelCompleteBaseOffsets;  // 各 UI 的螢幕偏移（跟隨相機）
+    std::shared_ptr<Util::GameObject> m_GradeText;  // GRADE A+/A
+    glm::vec2 m_VictoryFocus = {0.0F, 0.0F};        // 過關鏡頭聚焦點（主角與終點中點）
+    float m_VictoryZoomTarget = 1.0F;               // 過關鏡頭目標 zoom
+
+    // 角色解鎖 + 角色選擇畫面
+    std::vector<CharacterDef> m_Characters;   // 角色清單（含解鎖門檻）
+    int m_SelectedCharacter = 0;              // 目前使用中的角色 index
+    int m_CharacterBrowseIndex = 0;           // 角色選擇畫面正在瀏覽的 index
+    bool m_CharacterSelectVisible = false;
+    std::vector<std::shared_ptr<Util::GameObject>> m_CharacterSelectObjects;
+    std::vector<glm::vec2> m_CharacterSelectBasePositions;
+    std::vector<glm::vec2> m_CharacterSelectBaseScales;
+    std::vector<std::shared_ptr<Util::Image>> m_CharacterPreviewImages;  // 每個角色的預覽圖
+    std::shared_ptr<Util::GameObject> m_CharacterPreview;     // 中央大預覽
+    std::shared_ptr<Util::GameObject> m_CharacterNameText;
+    std::shared_ptr<Util::GameObject> m_CharacterDescText;
+    std::shared_ptr<Util::GameObject> m_CharacterLockText;    // 鎖定/門檻提示
+    std::shared_ptr<Util::GameObject> m_CharacterBandageText; // 左上角繃帶數
+    std::shared_ptr<Util::GameObject> m_CharacterLeftArrow;
+    std::shared_ptr<Util::GameObject> m_CharacterRightArrow;
+
     std::vector<Game::WorldData> m_Worlds;
     std::vector<Game::LevelConfig> m_Levels;
     std::size_t m_CurrentLevelIndex = 0;
@@ -546,6 +608,7 @@ private:
 
     AudioSettings m_AudioSettings;
     std::filesystem::path m_AudioSettingsPath = "audio_settings.txt";
+    std::filesystem::path m_ProgressPath = "player_progress.txt";  // 繃帶總數 + 所選角色
     std::shared_ptr<Util::BGM> m_TitleBGM;
     std::shared_ptr<Util::SFX> m_ButtonSFX;
     bool m_SettingsMenuVisible = false;
@@ -569,6 +632,9 @@ private:
     glm::vec2 m_WorldBoundsMin = {-640.0F, -480.0F};
     glm::vec2 m_WorldBoundsMax = {640.0F, 480.0F};
     glm::vec2 m_PlayerColliderSize = {96.0F, 96.0F};
+    // 主角目標世界高度：以預設角色 idle 在 player.scale 下的高度為基準，
+    // 讓不同來源像素尺寸的角色圖都縮放到相同大小（避免換角色後忽大忽小）。
+    float m_PlayerTargetHeight = 0.0F;
     glm::vec2 m_PlayerVelocity = {0.0F, 0.0F};
     bool m_IsJumping = false;
     float m_JumpHoldTimerMs = 0.0F;

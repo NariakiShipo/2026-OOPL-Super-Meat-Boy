@@ -162,7 +162,7 @@
       "fontSize": 28,
       "text": "TIME 0.00",
       "position": [
-        -560.0,
+        -460.0,
         330.0
       ],
       "zIndex": 100.0,
@@ -178,7 +178,7 @@
       "fontSize": 28,
       "text": "BANDAGE 0/0",
       "position": [
-        -560.0,
+        -460.0,
         292.0
       ],
       "zIndex": 100.0,
@@ -200,6 +200,30 @@
     ],
     "zIndex": 4.0
   },
+  "grading": {
+    "pixelsPerSecond": 180.0,
+    "minSeconds": 4.0,
+    "victoryZoomFactor": 2.0,
+    "victoryCameraLerp": 4.0
+  },
+  "characters": [
+    {
+      "name": "MEAT BOY",
+      "description": "THE FEARLESS RED HERO.\nALWAYS UNLOCKED.",
+      "idleSpritePath": "images/meatboystanding.png",
+      "runLeftSpritePath": "images/sprintLeft.png",
+      "runRightSpritePath": "images/sprintRight.png",
+      "unlockCost": 0
+    },
+    {
+      "name": "ORANGE BOY",
+      "description": "A ZESTY RECOLOR.\nUNLOCK BY COLLECTING BANDAGES.",
+      "idleSpritePath": "images/meatboyskins/orange/orange_meatboystanding.png",
+      "runLeftSpritePath": "images/meatboyskins/orange/orange_sprintLeft.png",
+      "runRightSpritePath": "images/meatboyskins/orange/orange_sprintRight.png",
+      "unlockCost": 3
+    }
+  ],
   "levelSelect": {
     "fontPath": "fonts/BlackOpsOne-Regular.ttf",
     "tabFontSize": 36,

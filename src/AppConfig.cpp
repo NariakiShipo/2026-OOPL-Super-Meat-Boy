@@ -290,6 +290,37 @@ void App::LoadGameConfig() {
                 bd.value("zIndex", m_Config.bandage.zIndex);
         }
 
+        if (root.contains("grading") && root["grading"].is_object()) {
+            const auto &gr = root["grading"];
+            m_Config.grading.pixelsPerSecond =
+                gr.value("pixelsPerSecond", m_Config.grading.pixelsPerSecond);
+            m_Config.grading.minSeconds =
+                gr.value("minSeconds", m_Config.grading.minSeconds);
+            m_Config.grading.victoryZoomFactor =
+                gr.value("victoryZoomFactor", m_Config.grading.victoryZoomFactor);
+            m_Config.grading.victoryCameraLerp =
+                gr.value("victoryCameraLerp", m_Config.grading.victoryCameraLerp);
+        }
+
+        if (root.contains("characters") && root["characters"].is_array()) {
+            m_Config.characters.clear();
+            for (const auto &ch : root["characters"]) {
+                if (!ch.is_object()) {
+                    continue;
+                }
+                CharacterDef def{};
+                def.name = ch.value("name", def.name);
+                def.description = ch.value("description", def.description);
+                def.idleSpritePath = ch.value("idleSpritePath", def.idleSpritePath);
+                def.runLeftSpritePath =
+                    ch.value("runLeftSpritePath", def.runLeftSpritePath);
+                def.runRightSpritePath =
+                    ch.value("runRightSpritePath", def.runRightSpritePath);
+                def.unlockCost = ch.value("unlockCost", def.unlockCost);
+                m_Config.characters.push_back(std::move(def));
+            }
+        }
+
         if (root.contains("boss") && root["boss"].is_object()) {
             const auto &boss = root["boss"];
             m_Config.boss.speed = boss.value("speed", m_Config.boss.speed);
