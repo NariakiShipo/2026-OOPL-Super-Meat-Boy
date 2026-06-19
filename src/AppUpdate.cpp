@@ -41,7 +41,9 @@ void App::Update() {
         }
     } else {
         const auto dtMs = std::max(Util::Time::GetDeltaTimeMs(), 1.0F);
+        m_LevelTimeMs += dtMs;  // 關卡計時（過關/暫停時不在此分支，自動停止）
         StepPlayer(dtMs);
+        CheckBandageCollection();
         UpdateShooters(dtMs);
         CheckBuzzsawPlayerCollisions();
         UpdateRotors(dtMs);
@@ -49,6 +51,7 @@ void App::Update() {
         StepBoss(dtMs);
         CheckBossPlayerCollision();
         UpdateCamera(dtMs);
+        UpdateHud();
     }
 
     m_Root.Update();

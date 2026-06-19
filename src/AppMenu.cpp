@@ -352,8 +352,19 @@ void App::ShowGameplayScreen() {
         m_Root.AddChild(m_Boss.object);
     }
     m_Root.AddChild(m_GoalFlag);
+    for (const auto &bandage : m_Bandages) {
+        if (bandage.object != nullptr) {
+            m_Root.AddChild(bandage.object);
+        }
+    }
     m_Root.AddChild(m_Player);
     m_Root.AddChild(m_StatusBoard);
+    if (m_TimerText != nullptr) {
+        m_Root.AddChild(m_TimerText);
+    }
+    if (m_BandageCountText != nullptr) {
+        m_Root.AddChild(m_BandageCountText);
+    }
     if (m_CheatIndicator != nullptr) {
         m_Root.AddChild(m_CheatIndicator);
     }

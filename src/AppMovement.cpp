@@ -176,6 +176,7 @@ void App::StepPlayer(const float dtMs) {
             if (m_StatusText != nullptr) {
                     m_StatusText->SetText(m_Config.ui.levelClearText);
             }
+            BankLevelBandages();  // 本關已收集的繃帶計入全域總數
             LOG_INFO("Level clear!");
         }
     }

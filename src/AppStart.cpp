@@ -138,6 +138,18 @@ void App::InitWorld() {
         m_Config.ui.statusText.zIndex, Util::Color(255, 200, 60, 255));
     m_CheatIndicator->SetVisible(false);
 
+    // HUD：關卡計時器與繃帶數量（細節由 gameplay.json 的 ui.timerText / ui.bandageText 設定）。
+    m_TimerText = CreateTextObject(
+        Common::ResolveAssetPath(m_Config.ui.timerText.fontPath),
+        m_Config.ui.timerText.fontSize, m_Config.ui.timerText.text,
+        m_Config.ui.timerText.position, m_Config.ui.timerText.zIndex,
+        m_Config.ui.timerText.color);
+    m_BandageCountText = CreateTextObject(
+        Common::ResolveAssetPath(m_Config.ui.bandageText.fontPath),
+        m_Config.ui.bandageText.fontSize, m_Config.ui.bandageText.text,
+        m_Config.ui.bandageText.position, m_Config.ui.bandageText.zIndex,
+        m_Config.ui.bandageText.color);
+
     m_TitleBackground = std::make_shared<Util::GameObject>();
     auto titleBackground = std::make_shared<Util::Image>(
         Common::ResolveAssetPath(m_Config.ui.titleBackgroundPath));
@@ -499,6 +511,9 @@ void App::LoadLevel(const std::size_t levelIndex) {
 
     // 旋轉鋸（ShowGameplayScreen 內會掛進 renderer）
     SpawnRotors(level.rotors);
+
+    // 繃帶收集品（位置來自 TMX；ShowGameplayScreen 內會掛進 renderer）
+    SpawnBandages(level.bandages);
 
     // Boss 關卡參數 + 生成（ShowGameplayScreen 內會掛進 renderer）
     m_LevelHasBoss = level.boss.enabled;

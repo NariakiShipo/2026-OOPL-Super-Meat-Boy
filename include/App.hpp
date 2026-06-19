@@ -116,6 +116,13 @@ private:
     void SpawnRotors(const std::vector<Game::RotorConfig> &configs);
     void UpdateRotors(float dtMs);
     void CheckRotorPlayerCollisions();
+    // 繃帶收集品 + HUD（AppBandage.cpp）
+    void SpawnBandages(const std::vector<glm::vec2> &positions);
+    void CheckBandageCollection();
+    void ResetBandages();   // 死亡重生時把整關繃帶復原
+    void BankLevelBandages();  // 過關時把本關已收集數量計入全域
+    void UpdateHud();       // 每幀更新計時器與繃帶數量文字
+    int CollectedBandageCount() const;  // 本關已收集的繃帶數
 
 private:
     struct UiTextSpec {
@@ -222,6 +229,26 @@ private:
         };
         glm::vec2 statusOffset = {-500.0F, 300.0F};
         std::string levelClearText = "LEVEL CLEAR! \nPress N for next level.";
+
+        // HUD：關卡計時器與繃帶數量（position 為相對螢幕中心的偏移，跟隨相機）。
+        UiTextSpec timerText{
+            "fonts/BlackOpsOne-Regular.ttf",
+            28,
+            "TIME 0.00",
+            {-560.0F, 330.0F},
+            100.0F,
+            Util::Color(255, 255, 255, 255),
+        };
+        UiTextSpec bandageText{
+            "fonts/BlackOpsOne-Regular.ttf",
+            28,
+            "BANDAGE 0/0",
+            {-560.0F, 292.0F},
+            100.0F,
+            Util::Color(255, 190, 210, 255),
+        };
+        std::string timerPrefix = "TIME ";
+        std::string bandagePrefix = "BANDAGE ";
     };
 
     struct PlayerConfig {
@@ -326,6 +353,14 @@ private:
         // 鋸片動畫沿用 buzzsaw.animFrames / animIntervalMs
     };
 
+    struct BandageConfig {
+        // 收集品貼圖。預設先沿用 bandagegirl.png 當 placeholder（小尺寸區隔終點），
+        // 之後可換成專屬的繃帶圖並改這裡。
+        std::string texturePath = "images/bandagegirl.png";
+        glm::vec2 size = {28.0F, 28.0F};
+        float zIndex = 4.0F;
+    };
+
     struct GameplayConfig {
         AudioConfig audio;
         UiConfig ui;
@@ -336,7 +371,15 @@ private:
         BuzzsawConfig buzzsaw;
         BossConfig boss;
         RotorTuningConfig rotor;
+        BandageConfig bandage;
         float goalSizeScale = 0.9F;
+    };
+
+    // 場上的繃帶收集品（每關依 TMX 生成）。
+    struct Bandage {
+        std::shared_ptr<Util::GameObject> object;
+        glm::vec2 colliderSize = {0.0F, 0.0F};
+        bool collected = false;
     };
 
     struct BreakableBlock {
@@ -476,6 +519,13 @@ private:
     std::shared_ptr<Util::Text> m_StatusText;
     // 作弊模式提示字：m_CheatSawImmune 開啟（F2）時顯示於螢幕下方中央。
     std::shared_ptr<Util::GameObject> m_CheatIndicator;
+
+    // 繃帶收集品 + HUD 狀態
+    std::vector<Bandage> m_Bandages;          // 當前關卡場上的繃帶
+    int m_BandagesCollected = 0;              // 跨關卡全域已收集總數（過關時計入）
+    float m_LevelTimeMs = 0.0F;               // 當前關卡計時（過關後停止）
+    std::shared_ptr<Util::GameObject> m_TimerText;        // HUD：計時器
+    std::shared_ptr<Util::GameObject> m_BandageCountText; // HUD：繃帶數量
 
     std::vector<Game::WorldData> m_Worlds;
     std::vector<Game::LevelConfig> m_Levels;

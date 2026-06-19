@@ -69,4 +69,14 @@ void App::UpdateCamera(const float dtMs) {
             m_CameraPosition + glm::vec2{0.0F, -330.0F};
         m_CheatIndicator->SetVisible(m_CheatSawImmune);
     }
+
+    // HUD（計時器 / 繃帶數量）同樣鎖定螢幕，跟著相機移動。
+    if (m_TimerText != nullptr) {
+        m_TimerText->m_Transform.translation =
+            m_CameraPosition + m_Config.ui.timerText.position;
+    }
+    if (m_BandageCountText != nullptr) {
+        m_BandageCountText->m_Transform.translation =
+            m_CameraPosition + m_Config.ui.bandageText.position;
+    }
 }

@@ -70,6 +70,7 @@ struct LevelConfig {
     std::vector<LevelObjectConfig> deathZones;
     std::vector<ShooterConfig> shooters;
     std::vector<RotorConfig> rotors;
+    std::vector<glm::vec2> bandages;  // 繃帶收集品位置（來自 TMX 名為 "bandage" 的物件）
     WorldInfo worldInfo;
     BossLevelConfig boss;
 };

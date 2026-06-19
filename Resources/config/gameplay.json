@@ -156,7 +156,49 @@
       0.0,
       310.0
     ],
-    "levelClearText": "LEVEL CLEAR! \nPress N for next level."
+    "levelClearText": "LEVEL CLEAR! \nPress N for next level.",
+    "timerText": {
+      "fontPath": "fonts/BlackOpsOne-Regular.ttf",
+      "fontSize": 28,
+      "text": "TIME 0.00",
+      "position": [
+        -560.0,
+        330.0
+      ],
+      "zIndex": 100.0,
+      "color": [
+        255,
+        255,
+        255,
+        255
+      ]
+    },
+    "bandageText": {
+      "fontPath": "fonts/BlackOpsOne-Regular.ttf",
+      "fontSize": 28,
+      "text": "BANDAGE 0/0",
+      "position": [
+        -560.0,
+        292.0
+      ],
+      "zIndex": 100.0,
+      "color": [
+        255,
+        190,
+        210,
+        255
+      ]
+    },
+    "timerPrefix": "TIME ",
+    "bandagePrefix": "BANDAGE "
+  },
+  "bandage": {
+    "texturePath": "images/bandage.png",
+    "size": [
+      28.0,
+      28.0
+    ],
+    "zIndex": 4.0
   },
   "levelSelect": {
     "fontPath": "fonts/BlackOpsOne-Regular.ttf",

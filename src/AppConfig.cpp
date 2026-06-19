@@ -126,6 +126,16 @@ void App::LoadGameConfig() {
             if (ui.contains("statusText")) {
                 parseTextSpec(ui["statusText"], &m_Config.ui.statusText);
             }
+            if (ui.contains("timerText")) {
+                parseTextSpec(ui["timerText"], &m_Config.ui.timerText);
+            }
+            if (ui.contains("bandageText")) {
+                parseTextSpec(ui["bandageText"], &m_Config.ui.bandageText);
+            }
+            m_Config.ui.timerPrefix =
+                ui.value("timerPrefix", m_Config.ui.timerPrefix);
+            m_Config.ui.bandagePrefix =
+                ui.value("bandagePrefix", m_Config.ui.bandagePrefix);
 
             m_Config.ui.statusOffset =
                 ParseVec2(ui.value("statusOffset", json::array()),
@@ -268,6 +278,16 @@ void App::LoadGameConfig() {
                 bz.value("spawnGraceMs", m_Config.buzzsaw.spawnGraceMs);
             m_Config.buzzsaw.size =
                 ParseVec2(bz.value("size", json::array()), m_Config.buzzsaw.size);
+        }
+
+        if (root.contains("bandage") && root["bandage"].is_object()) {
+            const auto &bd = root["bandage"];
+            m_Config.bandage.texturePath =
+                bd.value("texturePath", m_Config.bandage.texturePath);
+            m_Config.bandage.size =
+                ParseVec2(bd.value("size", json::array()), m_Config.bandage.size);
+            m_Config.bandage.zIndex =
+                bd.value("zIndex", m_Config.bandage.zIndex);
         }
 
         if (root.contains("boss") && root["boss"].is_object()) {

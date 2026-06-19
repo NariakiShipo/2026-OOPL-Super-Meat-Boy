@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="32" height="24" tilewidth="20" tileheight="20" infinite="0" nextlayerid="8" nextobjectid="169">
+<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="32" height="24" tilewidth="20" tileheight="20" infinite="0" nextlayerid="9" nextobjectid="173">
  <tileset firstgid="1" name="myimages" tilewidth="20" tileheight="20" tilecount="16" columns="16">
   <image source="myimages.png" width="320" height="20"/>
  </tileset>
@@ -105,36 +105,6 @@
 173,174,175,170,171,172,167,168,169,95,96,97,83,84,85,86,87,88,98,99,100,101,102,103,185,186,187,188,189,190,173,174
 </data>
  </layer>
- <objectgroup id="4" name="rectangle">
-  <object id="74" x="220" y="340" width="40" height="20"/>
-  <object id="78" x="620" y="140" width="20" height="80"/>
-  <object id="79" x="320" y="200" width="300" height="20"/>
-  <object id="80" x="620" y="260" width="20" height="80"/>
-  <object id="82" x="280" y="260" width="300" height="20"/>
-  <object id="151" x="280" y="320" width="340" height="20"/>
-  <object id="162" x="0" y="135" width="40" height="245"/>
-  <object id="165" x="0" y="420" width="640" height="60"/>
-  <object id="166" x="120" y="140" width="460" height="20"/>
-  <object id="167" x="120" y="160" width="160" height="180"/>
-  <object id="168" x="120" y="340" width="100" height="40"/>
- </objectgroup>
- <objectgroup id="5" name="saws">
-  <object id="154" x="360" y="310" width="20" height="20">
-   <ellipse/>
-  </object>
-  <object id="155" x="558.174" y="251.981" width="32.8452" height="33.4415">
-   <ellipse/>
-  </object>
-  <object id="156" x="502" y="191" width="20" height="20">
-   <ellipse/>
-  </object>
-  <object id="157" x="360" y="190" width="20" height="20">
-   <ellipse/>
-  </object>
-  <object id="158" x="499" y="312" width="20" height="20">
-   <ellipse/>
-  </object>
- </objectgroup>
  <layer id="7" name="breakable" width="32" height="24">
   <properties>
    <property name="collidable" value="true"/>
@@ -166,4 +136,39 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
+ <objectgroup id="4" name="rectangle">
+  <object id="74" x="220" y="340" width="40" height="20"/>
+  <object id="78" x="620" y="140" width="20" height="80"/>
+  <object id="79" x="320" y="200" width="300" height="20"/>
+  <object id="80" x="620" y="260" width="20" height="80"/>
+  <object id="82" x="280" y="260" width="300" height="20"/>
+  <object id="151" x="280" y="320" width="340" height="20"/>
+  <object id="162" x="0" y="135" width="40" height="245"/>
+  <object id="165" x="0" y="420" width="640" height="60"/>
+  <object id="166" x="120" y="140" width="460" height="20"/>
+  <object id="167" x="120" y="160" width="160" height="180"/>
+  <object id="168" x="120" y="340" width="100" height="40"/>
+ </objectgroup>
+ <objectgroup id="5" name="saws">
+  <object id="154" x="360" y="310" width="20" height="20">
+   <ellipse/>
+  </object>
+  <object id="155" x="558.174" y="251.981" width="32.8452" height="33.4415">
+   <ellipse/>
+  </object>
+  <object id="156" x="502" y="191" width="20" height="20">
+   <ellipse/>
+  </object>
+  <object id="157" x="360" y="190" width="20" height="20">
+   <ellipse/>
+  </object>
+  <object id="158" x="499" y="312" width="20" height="20">
+   <ellipse/>
+  </object>
+ </objectgroup>
+ <objectgroup id="8" name="items">
+  <object id="169" name="bandage" x="59.2984" y="318.984" width="28" height="28"/>
+  <object id="171" name="bandage" x="203.801" y="56.1571" width="28" height="28"/>
+  <object id="172" name="bandage" x="607.99" y="227.885" width="28" height="28"/>
+ </objectgroup>
 </map>

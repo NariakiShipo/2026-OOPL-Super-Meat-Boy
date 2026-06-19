@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="48" height="24" tilewidth="20" tileheight="20" infinite="0" nextlayerid="6" nextobjectid="83">
+<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="48" height="24" tilewidth="20" tileheight="20" infinite="0" nextlayerid="8" nextobjectid="91">
  <tileset firstgid="1" name="myimages" tilewidth="20" tileheight="20" tilecount="16" columns="16">
   <image source="myimages.png" width="320" height="20"/>
  </tileset>
@@ -15,7 +15,7 @@
  <tileset firstgid="2453" name="forestset1" tilewidth="20" tileheight="20" tilecount="676" columns="26">
   <image source="forestset1.png" width="520" height="520"/>
  </tileset>
- <layer id="1" name="background" width="48" height="24">
+ <layer id="1" name="background" width="48" height="24" locked="1">
   <data encoding="csv">
 917,918,919,920,921,922,923,924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,940,941,942,943,944,945,946,947,948,1685,1686,1687,1688,1689,1690,1691,1692,1693,1694,1695,1696,1697,1698,1699,1700,
 949,950,951,952,953,954,955,956,957,958,959,960,961,962,963,964,965,966,967,968,969,970,971,972,973,974,975,976,977,978,979,980,1717,1718,1719,1720,1721,1722,1723,1724,1725,1726,1727,1728,1729,1730,1731,1732,
@@ -43,7 +43,7 @@
 1653,1654,1655,1656,1657,1658,1659,1660,1661,1662,1663,1664,1665,1666,1667,1668,1669,1670,1671,1672,1673,1674,1675,1676,1677,1678,1679,1680,1681,1682,1683,1684,2421,2422,2423,2424,2425,2426,2427,2428,2429,2430,2431,2432,2433,2434,2435,2436
 </data>
  </layer>
- <layer id="2" name="stationary" width="48" height="24">
+ <layer id="2" name="stationary" width="48" height="24" locked="1">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -71,7 +71,7 @@
 170,171,172,539,539,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,509,509,509,509
 </data>
  </layer>
- <layer id="3" name="foreground" width="48" height="24">
+ <layer id="3" name="foreground" width="48" height="24" locked="1">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -134,5 +134,10 @@
   <object id="81" x="481" y="248" width="126" height="126">
    <ellipse/>
   </object>
+ </objectgroup>
+ <objectgroup id="7" name="items">
+  <object id="88" name="bandage" x="139.837" y="228.076" width="28" height="28"/>
+  <object id="89" name="bandage" x="78.3023" y="50.4375" width="28" height="28"/>
+  <object id="90" name="bandage" x="660.562" y="229.817" width="28" height="28"/>
  </objectgroup>
 </map>

@@ -88,6 +88,7 @@ void App::RespawnPlayer() {
     m_PlayerRunDrawableFacingRight = true;
     ApplyPlayerDrawable(m_PlayerIdleDrawable);
     m_LevelCleared = false;
+    m_LevelTimeMs = 0.0F;  // 每次重生（含死亡重試）重新計時
     if (m_StatusText != nullptr) {
         //m_StatusText->SetText("Reach the flag. Avoid red blocks.");
     }
@@ -136,6 +137,8 @@ void App::ResetLevelDynamics() {
         }
     }
     UpdateRotors(0.0F);  // 立即套用位置/角度，避免殘留上一幀狀態
+
+    ResetBandages();  // 繃帶復原：重新顯示、標記為未收集
 }
 
 void App::UpdateBreakableBlocks() {

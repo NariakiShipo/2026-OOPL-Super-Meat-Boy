@@ -624,6 +624,13 @@ LevelConfig LoadLevelFromTmx(const std::string &relativeMapPath) {
                 continue;
             }
 
+            // 繃帶收集品：在 TMX 放置名為 "bandage" 的點物件即可（請勿用橢圓，
+            // 否則會被上面的 ellipse→saw 分支判定為鋸）。尺寸/貼圖由 gameplay.json 決定。
+            if (obj.getName() == "bandage") {
+                level.bandages.push_back(worldCenter);
+                continue;
+            }
+
             // Boss（Lil' Slugger）標記：bossSpawn 存在才啟用 Boss
             if (obj.getName() == "bossSpawn") {
                 level.boss.enabled = true;
