@@ -498,3 +498,8 @@ docs/html/
 # Player local save data
 player_progress.txt
 audio_settings.txt
+
+# Local-only documents (not for version control)
+Proposal.md
+RESOURCE_USAGE.md
+oop_analysis.md
