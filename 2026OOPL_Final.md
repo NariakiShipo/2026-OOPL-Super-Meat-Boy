@@ -128,8 +128,6 @@ Util::Renderer    ──管理──> vector<GameObject>（依 zIndex 渲染）
 - **關卡**：以 Tiled 編輯器產出 `.tmx`，由 `Game::TmxLoader` 解析出平台、鋸子、出生點、終點、繃帶等物件。
 - **數值**：`Resources/config/gameplay.json` 外部化所有可調參數（物理常數、攝影機、音量、繃帶、評分門檻、角色清單、UI 位置等），改數值免重編譯。
 
-> 更完整的 OOP 技術逐點說明，另見 [`oop_analysis.md`](oop_analysis.md)。
-
 ### 程式技術
 
 **1. 物件導向三大支柱**
