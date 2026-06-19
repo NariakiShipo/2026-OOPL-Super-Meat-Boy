@@ -205,8 +205,6 @@
   <object id="102" x="160" y="115" width="20" height="65"/>
  </objectgroup>
  <objectgroup id="7" name="items">
-  <object id="106" name="bandage" x="84.5092" y="145.638" width="28" height="28"/>
   <object id="107" name="bandage" x="163.229" y="188.735" width="28" height="28"/>
-  <object id="108" name="bandage" x="685.679" y="104.299" width="28" height="28"/>
  </objectgroup>
 </map>

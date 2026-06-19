@@ -134,8 +134,6 @@
  </objectgroup>
  <objectgroup id="6" name="items">
   <object id="47" name="bandage" x="574.862" y="307.779" width="28" height="28"/>
-  <object id="48" name="bandage" x="956.308" y="18.6751" width="28" height="28"/>
-  <object id="49" name="bandage" x="945.653" y="366.736" width="28" height="28"/>
   <object id="50" x="300.489" y="320.589" width="58.8605" height="58.4569"/>
   <object id="51" x="320.259" y="380.815" width="58.8605" height="58.4569"/>
   <object id="52" x="440.047" y="380.355" width="58.8605" height="58.4569"/>

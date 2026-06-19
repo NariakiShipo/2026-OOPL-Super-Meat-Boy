@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="48" height="24" tilewidth="20" tileheight="20" infinite="0" nextlayerid="6" nextobjectid="29">
+<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="48" height="24" tilewidth="20" tileheight="20" infinite="0" nextlayerid="7" nextobjectid="30">
  <tileset firstgid="1" name="myimages" tilewidth="20" tileheight="20" tilecount="16" columns="16">
   <image source="myimages.png" width="320" height="20"/>
  </tileset>
@@ -103,16 +103,10 @@
   <object id="1" x="129.333" y="82.6667" width="60" height="60">
    <ellipse/>
   </object>
-  <object id="2" x="276" y="285.333" width="65" height="65">
+  <object id="3" x="276" y="164.089" width="65" height="65">
    <ellipse/>
   </object>
-  <object id="3" x="276" y="176" width="65" height="65">
-   <ellipse/>
-  </object>
-  <object id="5" x="717.333" y="178.667" width="65" height="65">
-   <ellipse/>
-  </object>
-  <object id="6" x="716" y="33.3333" width="65" height="65">
+  <object id="6" x="716.662" y="26.0543" width="65" height="65">
    <ellipse/>
   </object>
   <object id="8" x="876" y="233.333" width="45" height="45">
@@ -139,5 +133,8 @@
   <object id="26" x="898.667" y="138.667" width="61.3333" height="138.667"/>
   <object id="27" x="877.333" y="458.667" width="82.6667" height="20"/>
   <object id="28" x="1.33333" y="238.667" width="58.6667" height="42.6667"/>
+ </objectgroup>
+ <objectgroup id="6" name="items">
+  <object id="29" name="bandage" x="441.267" y="113.713" width="28" height="28"/>
  </objectgroup>
 </map>

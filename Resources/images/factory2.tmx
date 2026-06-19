@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="32" height="24" tilewidth="20" tileheight="20" infinite="0" nextlayerid="8" nextobjectid="40">
+<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="32" height="24" tilewidth="20" tileheight="20" infinite="0" nextlayerid="9" nextobjectid="41">
  <tileset firstgid="1" name="myimages" tilewidth="20" tileheight="20" tilecount="16" columns="16">
   <image source="myimages.png" width="320" height="20"/>
  </tileset>
@@ -184,5 +184,8 @@
   <object id="38" x="425" y="240" width="60" height="60">
    <ellipse/>
   </object>
+ </objectgroup>
+ <objectgroup id="8" name="items">
+  <object id="40" name="bandage" x="25.5835" y="6.65227" width="28" height="28"/>
  </objectgroup>
 </map>

@@ -167,8 +167,6 @@
   </object>
  </objectgroup>
  <objectgroup id="8" name="items">
-  <object id="169" name="bandage" x="59.2984" y="318.984" width="28" height="28"/>
-  <object id="171" name="bandage" x="203.801" y="56.1571" width="28" height="28"/>
   <object id="172" name="bandage" x="607.99" y="227.885" width="28" height="28"/>
  </objectgroup>
 </map>

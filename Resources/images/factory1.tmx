@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="36" height="30" tilewidth="20" tileheight="20" infinite="0" nextlayerid="7" nextobjectid="15">
+<map version="1.10" tiledversion="1.12.1" orientation="orthogonal" renderorder="right-down" width="36" height="30" tilewidth="20" tileheight="20" infinite="0" nextlayerid="8" nextobjectid="16">
  <tileset firstgid="1" name="myimages" tilewidth="20" tileheight="20" tilecount="16" columns="16">
   <image source="myimages.png" width="320" height="20"/>
  </tileset>
@@ -117,22 +117,6 @@
 1177,1178,1179,1180,1181,1182,1183,1184,1185,1186,1187,1188,1189,1190,1191,1192,1193,1194,1195,1196,1197,1198,1199,1200,1201,1202,1203,1204,1205,1206,1207,1208,1209,1210,1211,1212
 </data>
  </layer>
- <objectgroup id="4" name="saws">
-  <object id="6" x="263" y="62" width="210" height="210">
-   <ellipse/>
-  </object>
-  <object id="7" x="362" y="410.308" width="69.2308" height="69.2308">
-   <ellipse/>
-  </object>
- </objectgroup>
- <objectgroup id="5" name="rectangle">
-  <object id="9" x="20" y="478" width="180" height="64"/>
-  <object id="10" x="598" y="400" width="122" height="38"/>
-  <object id="11" x="218" y="19" width="61" height="240"/>
-  <object id="12" x="280" y="20" width="239" height="59"/>
-  <object id="13" x="460" y="78" width="58" height="183"/>
-  <object id="14" x="299" y="439" width="182" height="61"/>
- </objectgroup>
  <layer id="6" name="breakable" width="36" height="30">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -167,4 +151,23 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
+ <objectgroup id="4" name="saws">
+  <object id="6" x="263" y="62" width="210" height="210">
+   <ellipse/>
+  </object>
+  <object id="7" x="362" y="410.308" width="69.2308" height="69.2308">
+   <ellipse/>
+  </object>
+ </objectgroup>
+ <objectgroup id="5" name="rectangle">
+  <object id="9" x="20" y="478" width="180" height="64"/>
+  <object id="10" x="598" y="400" width="122" height="38"/>
+  <object id="11" x="218" y="19" width="61" height="240"/>
+  <object id="12" x="280" y="20" width="239" height="59"/>
+  <object id="13" x="460" y="78" width="58" height="183"/>
+  <object id="14" x="299" y="439" width="182" height="61"/>
+ </objectgroup>
+ <objectgroup id="7" name="items">
+  <object id="15" name="bandage" x="636.806" y="231.587" width="28" height="28"/>
+ </objectgroup>
 </map>

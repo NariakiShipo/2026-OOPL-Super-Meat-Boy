@@ -348,8 +348,6 @@
   <object id="6" x="0" y="1080" width="300" height="60"/>
  </objectgroup>
  <objectgroup id="9" name="items">
-  <object id="7" name="bandage" x="493.711" y="388.911" width="28" height="28"/>
   <object id="8" name="bandage" x="19.1234" y="538.78" width="28" height="28"/>
-  <object id="9" name="bandage" x="203.745" y="470.904" width="28" height="28"/>
  </objectgroup>
 </map>

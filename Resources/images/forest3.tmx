@@ -200,7 +200,5 @@
  </objectgroup>
  <objectgroup id="7" name="items">
   <object id="24" name="bandage" x="33.2597" y="229.159" width="28" height="28"/>
-  <object id="25" name="bandage" x="196.382" y="136.926" width="28" height="28"/>
-  <object id="26" name="bandage" x="687.273" y="575.984" width="28" height="28"/>
  </objectgroup>
 </map>
