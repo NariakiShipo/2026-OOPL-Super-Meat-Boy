@@ -450,6 +450,8 @@ private:
 
     PlayerAnimState m_PlayerAnimState = PlayerAnimState::IDLE;
     bool m_PlayerFacingRight = true;
+    // 目前 RUN 貼圖採用的朝向；朝向改變時即使仍在 RUN 也要重貼圖。
+    bool m_PlayerRunDrawableFacingRight = true;
 
     std::vector<std::shared_ptr<Util::GameObject>> m_Platforms;
     std::vector<BreakableBlock> m_BreakableBlocks;
@@ -472,6 +474,8 @@ private:
 
     std::shared_ptr<Util::GameObject> m_StatusBoard;
     std::shared_ptr<Util::Text> m_StatusText;
+    // 作弊模式提示字：m_CheatSawImmune 開啟（F2）時顯示於螢幕下方中央。
+    std::shared_ptr<Util::GameObject> m_CheatIndicator;
 
     std::vector<Game::WorldData> m_Worlds;
     std::vector<Game::LevelConfig> m_Levels;
@@ -528,6 +532,10 @@ private:
     float m_BreakableDebugLogCooldownMs = 0.0F;
     bool m_LevelCleared = false;
     int m_RespawnCount = 0;
+
+    // 作弊模式：開啟後碰到鋸類危險物（死亡區動畫鋸 / 飛鋸 / 旋轉鋸）不會死亡。
+    // 由 F2 切換，預設關閉。
+    bool m_CheatSawImmune = false;
 };
 
 #endif

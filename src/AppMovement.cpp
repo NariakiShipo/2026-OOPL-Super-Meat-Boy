@@ -125,11 +125,13 @@ void App::StepPlayer(const float dtMs) {
 
     const auto playerCenter = m_Player->m_Transform.translation;
     const auto playerAabb = Game::MakeAabb(playerCenter, m_PlayerColliderSize);
-    for (const auto &deathZone : m_DeathZones) {
-        if (Game::IsOverlap(playerAabb, Game::GetAabb(deathZone))) {
-            LOG_INFO("Hit death zone. Respawning...");
-            RespawnPlayer();
-            return;
+    if (!m_CheatSawImmune) {
+        for (const auto &deathZone : m_DeathZones) {
+            if (Game::IsOverlap(playerAabb, Game::GetAabb(deathZone))) {
+                LOG_INFO("Hit death zone. Respawning...");
+                RespawnPlayer();
+                return;
+            }
         }
     }
 

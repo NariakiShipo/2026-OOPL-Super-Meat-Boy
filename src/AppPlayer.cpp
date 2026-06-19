@@ -38,7 +38,12 @@ void App::UpdatePlayerAnimation(const float moveAxis) {
         nextState = PlayerAnimState::RUN;
     }
 
-    if (nextState == m_PlayerAnimState) {
+    // RUN 狀態還細分左右朝向：朝向改變時即使狀態仍是 RUN，也必須重貼對應方向的
+    // 跑步圖，否則向右跑直接反向往左跑（速度一幀內跨過 runThreshold）會卡在右跑動畫。
+    const bool runDirectionChanged =
+        nextState == PlayerAnimState::RUN &&
+        m_PlayerFacingRight != m_PlayerRunDrawableFacingRight;
+    if (nextState == m_PlayerAnimState && !runDirectionChanged) {
         return;
     }
 
@@ -54,6 +59,7 @@ void App::UpdatePlayerAnimation(const float moveAxis) {
         } else {
             ApplyPlayerDrawable(m_PlayerRunLeftDrawable);
         }
+        m_PlayerRunDrawableFacingRight = m_PlayerFacingRight;
         break;
     case PlayerAnimState::JUMP:
         ApplyPlayerDrawable(m_PlayerJumpDrawable);
@@ -79,6 +85,7 @@ void App::RespawnPlayer() {
     m_WallReattachCooldownMs = 0.0F;
     m_PlayerAnimState = PlayerAnimState::IDLE;
     m_PlayerFacingRight = true;
+    m_PlayerRunDrawableFacingRight = true;
     ApplyPlayerDrawable(m_PlayerIdleDrawable);
     m_LevelCleared = false;
     if (m_StatusText != nullptr) {

@@ -131,6 +131,13 @@ void App::InitWorld() {
     m_StatusBoard->SetDrawable(m_StatusText);
     m_StatusBoard->SetZIndex(m_Config.ui.statusText.zIndex);
 
+    // 作弊模式提示字（預設隱藏，F2 開啟後顯示，位置每幀跟著相機）。
+    m_CheatIndicator = CreateTextObject(
+        Common::ResolveAssetPath(m_Config.ui.statusText.fontPath), 28,
+        "CHEAT: SAW IMMUNE (F2)", {0.0F, -330.0F},
+        m_Config.ui.statusText.zIndex, Util::Color(255, 200, 60, 255));
+    m_CheatIndicator->SetVisible(false);
+
     m_TitleBackground = std::make_shared<Util::GameObject>();
     auto titleBackground = std::make_shared<Util::Image>(
         Common::ResolveAssetPath(m_Config.ui.titleBackgroundPath));
@@ -226,13 +233,18 @@ void App::InitWorld() {
         m_SettingsToLevelSelectButton,
     };
 
-    // 記錄基準 transform：OpenSettingsMenu 依目前相機重新放置
+    // 記錄基準 transform：OpenSettingsMenu 依目前相機重新放置。
+    // 底板中心原本在 y=-90（偏螢幕下方），整組（底板＋所有文字）往上平移，
+    // 讓設定選單垂直置中於螢幕。
+    constexpr float kSettingsCenterOffsetY = 90.0F;
     m_SettingsBasePositions.clear();
     m_SettingsBaseScales.clear();
     for (const auto &object : m_SettingsObjects) {
-        m_SettingsBasePositions.push_back(
-            object != nullptr ? object->m_Transform.translation
-                              : glm::vec2{0.0F, 0.0F});
+        glm::vec2 basePosition = object != nullptr
+                                     ? object->m_Transform.translation
+                                     : glm::vec2{0.0F, 0.0F};
+        basePosition.y += kSettingsCenterOffsetY;
+        m_SettingsBasePositions.push_back(basePosition);
         m_SettingsBaseScales.push_back(object != nullptr
                                            ? object->m_Transform.scale
                                            : glm::vec2{1.0F, 1.0F});

@@ -62,4 +62,11 @@ void App::UpdateCamera(const float dtMs) {
         m_StatusBoard->m_Transform.translation =
             m_CameraPosition + m_Config.ui.statusOffset + m_Config.ui.statusText.position;
     }
+
+    // 作弊提示字固定在螢幕下方中央，並依作弊狀態顯示/隱藏。
+    if (m_CheatIndicator != nullptr) {
+        m_CheatIndicator->m_Transform.translation =
+            m_CameraPosition + glm::vec2{0.0F, -330.0F};
+        m_CheatIndicator->SetVisible(m_CheatSawImmune);
+    }
 }

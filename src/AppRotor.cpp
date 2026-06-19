@@ -143,7 +143,7 @@ void App::UpdateRotors(const float dtMs) {
 }
 
 void App::CheckRotorPlayerCollisions() {
-    if (m_Rotors.empty() || m_Player == nullptr) {
+    if (m_CheatSawImmune || m_Rotors.empty() || m_Player == nullptr) {
         return;
     }
 

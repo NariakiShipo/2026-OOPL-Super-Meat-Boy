@@ -145,7 +145,7 @@ void App::UpdateShooters(const float dtMs) {
 }
 
 void App::CheckBuzzsawPlayerCollisions() {
-    if (m_LiveBuzzsaws.empty() || m_Player == nullptr) {
+    if (m_CheatSawImmune || m_LiveBuzzsaws.empty() || m_Player == nullptr) {
         return;
     }
 

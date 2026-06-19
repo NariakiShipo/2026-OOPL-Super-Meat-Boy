@@ -354,6 +354,9 @@ void App::ShowGameplayScreen() {
     m_Root.AddChild(m_GoalFlag);
     m_Root.AddChild(m_Player);
     m_Root.AddChild(m_StatusBoard);
+    if (m_CheatIndicator != nullptr) {
+        m_Root.AddChild(m_CheatIndicator);
+    }
     for (const auto &object : m_SettingsObjects) {
         m_Root.AddChild(object);
     }

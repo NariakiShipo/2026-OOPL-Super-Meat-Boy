@@ -29,11 +29,9 @@ constexpr float kNodeStepY = -170.0F;
 constexpr glm::vec2 kNodeSize = {120.0F, 84.0F};
 constexpr float kNodeZ = 50.0F;
 
-std::shared_ptr<Util::GameObject> MakeText(const std::string &text,
-                                           const int fontSize,
-                                           const glm::vec2 &position,
-                                           const float zIndex,
-                                           const Util::Color &color) {
+std::shared_ptr<Util::GameObject>
+MakeText(const std::string &text, const int fontSize, const glm::vec2 &position,
+         const float zIndex, const Util::Color &color) {
   auto object = std::make_shared<Util::GameObject>();
   object->SetDrawable(std::make_shared<Util::Text>(
       Common::ResolveAssetPath("fonts/Inter.ttf"), fontSize, text, color));
@@ -47,11 +45,13 @@ std::shared_ptr<Util::GameObject> MakeImage(const std::string &relativePath,
                                             const glm::vec2 &size,
                                             const float zIndex) {
   auto object = std::make_shared<Util::GameObject>();
-  auto image = std::make_shared<Util::Image>(Common::ResolveAssetPath(relativePath));
+  auto image =
+      std::make_shared<Util::Image>(Common::ResolveAssetPath(relativePath));
   object->SetDrawable(image);
   const auto textureSize = image->GetSize();
   if (textureSize.x > 0.0F && textureSize.y > 0.0F) {
-    object->m_Transform.scale = {size.x / textureSize.x, size.y / textureSize.y};
+    object->m_Transform.scale = {size.x / textureSize.x,
+                                 size.y / textureSize.y};
   }
   object->m_Transform.translation = position;
   object->SetZIndex(zIndex);
@@ -116,16 +116,15 @@ void App::ShowLevelSelectScreen() {
   }
 
   // 背景：世界圖滿版淡化 + 綠色頂/底橫幅
-  m_LevelSelectBackground = MakeImage(world.bgImagePath, {0.0F, 0.0F},
-                                      {static_cast<float>(WINDOW_WIDTH),
-                                       static_cast<float>(WINDOW_HEIGHT)},
-                                      -100.0F);
+  m_LevelSelectBackground = MakeImage(
+      world.bgImagePath, {0.0F, 0.0F},
+      {static_cast<float>(WINDOW_WIDTH), static_cast<float>(WINDOW_HEIGHT)},
+      -100.0F);
   m_LevelSelectObjects.push_back(m_LevelSelectBackground);
-  m_LevelSelectObjects.push_back(
-      MakeImage("images/ui_panel.png", {0.0F, 0.0F},
-                {static_cast<float>(WINDOW_WIDTH),
-                 static_cast<float>(WINDOW_HEIGHT)},
-                -90.0F));  // 半透明壓暗
+  m_LevelSelectObjects.push_back(MakeImage(
+      "images/ui_panel.png", {0.0F, 0.0F},
+      {static_cast<float>(WINDOW_WIDTH), static_cast<float>(WINDOW_HEIGHT)},
+      -90.0F)); // 半透明壓暗
 
   const bool hasBoss = (world.category == Game::WorldCategory::Forest) &&
                        (m_BossTestLevelIndex < m_Levels.size());
@@ -133,16 +132,15 @@ void App::ShowLevelSelectScreen() {
   // 頂部橫幅
   m_LevelSelectObjects.push_back(MakeImage(
       "images/ui_panel_green.png", {0.0F, 285.0F}, {1100.0F, 100.0F}, 100.0F));
-  const std::string chTitle =
-      "CH" + std::to_string(m_LevelSelectWorldIndex + 1) + ": THE " +
-      UpperCase(world.name);
+  const std::string chTitle = "CH" +
+                              std::to_string(m_LevelSelectWorldIndex + 1) +
+                              ": THE " + UpperCase(world.name);
   m_LevelSelectTitle = MakeText(chTitle, 36, {0.0F, 298.0F}, 110.0F,
                                 Util::Color(30, 45, 20, 255));
   m_LevelSelectObjects.push_back(m_LevelSelectTitle);
   m_LevelSelectObjects.push_back(MakeText(
-      "LEVELS: " +
-          std::to_string(world.levels.size() + (hasBoss ? 1 : 0)),
-      20, {0.0F, 260.0F}, 110.0F, Util::Color(50, 70, 35, 255)));
+      "LEVELS: " + std::to_string(world.levels.size() + (hasBoss ? 1 : 0)), 20,
+      {0.0F, 260.0F}, 110.0F, Util::Color(50, 70, 35, 255)));
 
   // ── 關卡節點 ───────────────────────────────────────────────
   const int levelCount = static_cast<int>(world.levels.size());
@@ -150,11 +148,11 @@ void App::ShowLevelSelectScreen() {
     LevelNode node;
     node.position = SnakePosition(i);
     node.globalLevelIndex = globalOffset + static_cast<std::size_t>(i);
-    node.displayName =
-        std::to_string(m_LevelSelectWorldIndex + 1) + "-" +
-        std::to_string(i + 1) + "  " +
-        UpperCase(LevelStem(world.levels[i].mapPath));
-    node.tile = MakeImage("images/ui_node.png", node.position, kNodeSize, kNodeZ);
+    node.displayName = std::to_string(m_LevelSelectWorldIndex + 1) + "-" +
+                       std::to_string(i + 1) + "  " +
+                       UpperCase(LevelStem(world.levels[i].mapPath));
+    node.tile =
+        MakeImage("images/ui_node.png", node.position, kNodeSize, kNodeZ);
     node.label = MakeText(std::to_string(i + 1), 28,
                           {node.position.x, node.position.y + 2.0F},
                           kNodeZ + 1.0F, Util::Color(255, 255, 255, 255));
@@ -168,9 +166,9 @@ void App::ShowLevelSelectScreen() {
     node.position = SnakePosition(levelCount);
     node.globalLevelIndex = m_BossTestLevelIndex;
     node.displayName = "BOSS  LIL' SLUGGER";
-    node.tile = MakeImage("images/ui_node_boss.png", node.position, kNodeSize,
-                          kNodeZ);
-    node.label = nullptr;  // 骷髏臉已畫在貼圖上
+    node.tile =
+        MakeImage("images/ui_node_boss.png", node.position, kNodeSize, kNodeZ);
+    node.label = nullptr;
     m_LevelSelectObjects.push_back(node.tile);
     m_LevelNodes.push_back(std::move(node));
   }
@@ -183,9 +181,8 @@ void App::ShowLevelSelectScreen() {
     const int dashes = 4;
     for (int k = 1; k <= dashes; ++k) {
       const float t = static_cast<float>(k) / (dashes + 1);
-      m_LevelSelectObjects.push_back(
-          MakeImage("images/ui_white.png", a + delta * t,
-                    {14.0F, 5.0F}, kNodeZ - 1.0F));
+      m_LevelSelectObjects.push_back(MakeImage(
+          "images/ui_white.png", a + delta * t, {14.0F, 5.0F}, kNodeZ - 1.0F));
     }
   }
 
@@ -195,12 +192,12 @@ void App::ShowLevelSelectScreen() {
   m_LevelSelBottomText = MakeText("SELECT A LEVEL", 30, {0.0F, -290.0F}, 110.0F,
                                   Util::Color(30, 45, 20, 255));
   m_LevelSelectObjects.push_back(m_LevelSelBottomText);
-  m_LevelSelectObjects.push_back(
-      MakeText("[SPACE] SELECT", 20, {-460.0F, -325.0F}, 110.0F,
-               Util::Color(45, 60, 30, 255)));
-  m_LevelSelectObjects.push_back(
-      MakeText("[ESC] BACK", 20, {460.0F, -325.0F}, 110.0F,
-               Util::Color(45, 60, 30, 255)));
+  m_LevelSelectObjects.push_back(MakeText("[SPACE] SELECT", 20,
+                                          {-460.0F, -325.0F}, 110.0F,
+                                          Util::Color(45, 60, 30, 255)));
+  m_LevelSelectObjects.push_back(MakeText("[ESC] BACK", 20, {460.0F, -325.0F},
+                                          110.0F,
+                                          Util::Color(45, 60, 30, 255)));
 
   for (const auto &object : m_LevelSelectObjects) {
     m_Root.AddChild(object);
@@ -265,7 +262,7 @@ void App::UpdateLevelSelectScreen() {
   for (int i = 0; i < nodeCount; ++i) {
     auto &node = m_LevelNodes[i];
     const bool selected = (i == m_LevelNodeIndex);
-    const float baseScaleX = kNodeSize.x / 120.0F;  // ui_node 原始 120×84
+    const float baseScaleX = kNodeSize.x / 120.0F; // ui_node 原始 120×84
     const float baseScaleY = kNodeSize.y / 84.0F;
     const float factor = selected ? 1.18F : 1.0F;
     if (node.tile != nullptr) {

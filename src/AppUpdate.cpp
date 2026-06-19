@@ -1,8 +1,18 @@
 #include "App.hpp"
 #include "Util/Input.hpp"
+#include "Util/Logger.hpp"
 #include "Util/Time.hpp"
 
 void App::Update() {
+    // 作弊模式切換：F2 開關「碰到鏈鋸不會死亡」。放在最前面，暫停/遊戲中都可切換。
+    if (Util::Input::IsKeyDown(Util::Keycode::F2)) {
+        m_CheatSawImmune = !m_CheatSawImmune;
+        LOG_INFO("Cheat [saw immune] = {}", m_CheatSawImmune ? "ON" : "OFF");
+        if (m_CheatIndicator != nullptr) {
+            m_CheatIndicator->SetVisible(m_CheatSawImmune);
+        }
+    }
+
     bool shouldUpdateGameplay = true;
 
     // 選單層級：設定（最上）→ 暫停 → 遊戲
