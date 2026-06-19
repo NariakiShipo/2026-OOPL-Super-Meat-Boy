@@ -73,7 +73,7 @@
 | 角色選擇 | 左右切換角色、顯示名稱/描述/解鎖門檻、左上角繃帶總數 |
 | 通關畫面 | LEVEL COMPLETE + GRADE A+/A，鏡頭放大聚焦主角與繃帶妹 |
 
-> 對應截圖見 `Resources/images/screenshot1.png` ~ `screenshot4.png`（可依實際畫面替換下方圖片）。
+> 對應截圖見 `Resources/images/screenshot1.png` ~ `screenshot4.png`
 
 ![遊戲畫面](Resources/images/screenshot1.png)
 
