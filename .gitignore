@@ -503,6 +503,3 @@ audio_settings.txt
 Proposal.md
 RESOURCE_USAGE.md
 oop_analysis.md
-
-# PTSD vendored third-party libraries (not version-controlled here)
-PTSD/lib/

@@ -5,20 +5,23 @@ set(CMAKE_CXX_STANDARD 17)
 
 cmake_policy(SET CMP0135 NEW)
 
+# Some bundled third-party dependencies (e.g. SDL2 2.26, glew) still declare a
+# `cmake_minimum_required()` below 3.5, which CMake >= 4.0 rejects outright.
+# Provide the documented compatibility floor so they configure on modern CMake.
+if(NOT DEFINED CMAKE_POLICY_VERSION_MINIMUM)
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+endif()
+
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
 
-FetchContent_Declare(
-    ptsd
-
-    URL         https://github.com/ntut-open-source-club/practical-tools-for-simple-design/archive/refs/tags/v0.2.zip
-
-    # Or alternatively if you want to use a specific git commit instead of a release:
-    # GIT_REPOSITORY  https://github.com/ntut-open-source-club/practical-tools-for-simple-design.git
-    # GIT_TAG         <git_tag>
-
-    SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/PTSD
-)
+# The PTSD framework is vendored in this repository (see ./PTSD) so that our
+# local modifications stay under version control. Build it directly from source
+# instead of re-downloading the upstream release (which would overwrite our
+# changes). PTSD's own third-party dependencies (SDL2, SDL2_image/ttf/mixer,
+# glew, glm, spdlog, ImGui, googletest) are fetched automatically on the first
+# configure by PTSD/cmake/Dependencies.cmake.
+add_subdirectory(PTSD)
 
 FetchContent_Declare(
     tmxlite
@@ -34,7 +37,6 @@ FetchContent_Declare(
     URL         https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.zip
 )
 
-FetchContent_MakeAvailable(ptsd)
 FetchContent_MakeAvailable(nlohmann_json)
 
 FetchContent_GetProperties(tmxlite)

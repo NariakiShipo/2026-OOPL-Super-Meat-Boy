@@ -46,23 +46,73 @@
 
 ## 建置方式
 
-1. Clone 本專案（含子模組）：
+本專案使用 **CMake** 建置，並透過 `FetchContent` **自動下載所有第三方依賴**（SDL2、SDL2_image/ttf/mixer、glew、glm、spdlog、ImGui、tmxlite、nlohmann/json…）。**不需要**手動安裝這些函式庫，也**不需要** `--recursive`（PTSD 框架已內含於本專案）。
 
-   ```bash
-   git clone YOUR_GIT_URL --recursive
-   ```
+> [!NOTE]
+> 第一次建置時 CMake 會下載並編譯上述依賴，需要網路連線，且耗時較久（依網速與機器約數分鐘）。之後的建置會使用快取，速度很快。
 
-2. 建置專案：
+### 事前準備
 
-   > [!WARNING]
-   > 請使用 `Debug` 模式建置，`Release` 路徑目前尚未修正。
+| 工具 | 版本需求 | 說明 |
+|------|----------|------|
+| CMake | ≥ 3.16 | 已支援 CMake 4.x（內建相容性設定） |
+| C++ 編譯器 | 支援 C++17 | macOS：Apple Clang／Windows：MSVC 或 Clang |
+| OpenGL | 系統內建 | macOS、Windows 一般免額外安裝 |
 
-   ```sh
-   cmake -DCMAKE_BUILD_TYPE=Debug -B build
-   cmake --build build
-   ```
+### 通用步驟
 
-3. 執行產出的執行檔即可開始遊戲。
+> [!WARNING]
+> 請使用 `Debug` 模式建置，`Release` 路徑目前尚未修正。
+
+```sh
+# 1. Clone 本專案（PTSD 已內含，不需要 --recursive）
+git clone YOUR_GIT_URL
+cd 2026-OOPL-Super-Meat-Boy
+
+# 2. 設定並建置（首次會自動下載依賴）
+cmake -DCMAKE_BUILD_TYPE=Debug -B build
+cmake --build build
+```
+
+### 🍎 macOS
+
+- 安裝 [Xcode Command Line Tools](https://developer.apple.com/xcode/)（提供 Apple Clang）：
+
+  ```sh
+  xcode-select --install
+  ```
+
+- 安裝 CMake（擇一）：
+
+  ```sh
+  brew install cmake
+  ```
+
+- 依上方「通用步驟」建置，執行檔產生於 `build/SuperMeatBoy`：
+
+  ```sh
+  ./build/SuperMeatBoy
+  ```
+
+### 🪟 Windows
+
+- 安裝 [Visual Studio](https://visualstudio.microsoft.com/)（含「**使用 C++ 的桌面開發**」工作負載）與 [CMake](https://cmake.org/download/)（Visual Studio 安裝程式亦可一併勾選）。
+
+- 使用 **x64** 工具鏈建置（建議在「Developer Command Prompt for VS」或 PowerShell 中執行）：
+
+  ```powershell
+  cmake -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Debug -B build
+  cmake --build build --config Debug
+  ```
+
+- 執行檔產生於 `build\Debug\SuperMeatBoy.exe`：
+
+  ```powershell
+  .\build\Debug\SuperMeatBoy.exe
+  ```
+
+> [!TIP]
+> 若你的 CMake 為 4.x 並在建置 SDL2 等舊版依賴時遇到 `Compatibility with CMake < 3.5 has been removed` 錯誤，本專案已內建 `CMAKE_POLICY_VERSION_MINIMUM=3.5` 處理；如仍有問題，可在 configure 時手動加上 `-DCMAKE_POLICY_VERSION_MINIMUM=3.5`。
 
 ---
 
