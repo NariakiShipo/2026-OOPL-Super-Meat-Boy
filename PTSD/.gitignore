@@ -6,6 +6,10 @@
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 
+# Ignore .DS_Store file from a git repository
+
+.DS_Store
+
 # User-specific stuff
 .idea/**/workspace.xml
 .idea/**/tasks.xml
@@ -494,15 +498,3 @@ lib/
 
 # Doxygen generated files
 docs/html/
-
-# Player local save data
-player_progress.txt
-audio_settings.txt
-
-# Local-only documents (not for version control)
-Proposal.md
-RESOURCE_USAGE.md
-oop_analysis.md
-
-# PTSD vendored third-party libraries (not version-controlled here)
-PTSD/lib/
