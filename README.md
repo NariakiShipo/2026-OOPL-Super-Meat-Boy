@@ -39,8 +39,8 @@
 
 ## 專案文件
 
-- 📄 [Proposal（企劃書）](Proposal.md)
-- 📋 [Final Report（期末報告）](2026OOPL_Final.md)
+- 📄 [Proposal（企劃書）](https://github.com/NariakiShipo/2026-OOPL-Report/blob/main/Proposal.md)
+- 📋 [Final Report（期末報告）](https://github.com/NariakiShipo/2026-OOPL-Report/blob/main/2026OOPL_Final.md)
 
 ---
 
