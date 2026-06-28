@@ -51,6 +51,11 @@ void Texture::UpdateData(GLint format, int width, int height,
                          const void *data) {
     glBindTexture(GL_TEXTURE_2D, m_TextureId);
 
+    // 以 1-byte 對齊上傳像素。OpenGL 預設 GL_UNPACK_ALIGNMENT=4，當圖片每列 byte 數
+    // 不是 4 的倍數時（例如寬度非 4 倍數的 RGB 圖：width*3 未對齊），會逐列位移造成
+    // 整張材質「歪斜」。設為 1 可保證任何格式/寬度都正確（跨平台一致）。
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
     // Reference:
     // https://registry.khronos.org/OpenGL-Refpages/gl4/html/glTexImage2D.xhtml
     glTexImage2D(GL_TEXTURE_2D, 0, GlFormatToGlInternalFormat(format), width,

@@ -39,6 +39,12 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(nlohmann_json)
 
+# 強制 tmxlite 建成「靜態函式庫」。預設是動態(DLL)，在 Windows/MSVC 會：
+# (1) 產生 tmxlite-d.dll，執行時需放在 exe 旁，否則「找不到 dll」；
+# (2) 標頭以 __declspec(dllimport) 連結，若 app 端未一致定義 TMXLITE_STATIC 會 ABI 不符。
+# 改為靜態並在 app 端定義 TMXLITE_STATIC（見下方）即可一次解決。
+set(TMXLITE_STATIC_LIB ON CACHE BOOL "Build tmxlite as a static library" FORCE)
+
 # tmxlite：優先使用 repo 內附帶的 vendored 函式庫（lib/tmxlite/tmxlite），
 # 避免在 Windows / 助教端 build 時還要連網下載。找不到才退回 FetchContent。
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/lib/tmxlite/tmxlite/CMakeLists.txt)
@@ -67,6 +73,10 @@ add_executable(${PROJECT_NAME}
     ${SRC_FILES}
     ${HEADER_FILES}
 )
+
+# 與上面的靜態 tmxlite 一致：讓 app 端的 tmxlite 標頭不使用 __declspec(dllimport)
+# （MSVC 上避免連結到不存在的 tmxlite-d.dll）。非 Windows 平台此巨集無副作用。
+target_compile_definitions(${PROJECT_NAME} PRIVATE TMXLITE_STATIC)
 
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4)
