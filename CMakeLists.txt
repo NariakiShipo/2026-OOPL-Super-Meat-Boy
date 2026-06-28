@@ -39,10 +39,18 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(nlohmann_json)
 
-FetchContent_GetProperties(tmxlite)
-if (NOT ${tmxlite_POPULATED})
-    FetchContent_Populate(tmxlite)
-    add_subdirectory(${tmxlite_SOURCE_DIR}/tmxlite ${tmxlite_BINARY_DIR})
+# tmxlite：優先使用 repo 內附帶的 vendored 函式庫（lib/tmxlite/tmxlite），
+# 避免在 Windows / 助教端 build 時還要連網下載。找不到才退回 FetchContent。
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/lib/tmxlite/tmxlite/CMakeLists.txt)
+    add_subdirectory(
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/tmxlite/tmxlite
+        ${CMAKE_BINARY_DIR}/tmxlite-build)
+else()
+    FetchContent_GetProperties(tmxlite)
+    if (NOT ${tmxlite_POPULATED})
+        FetchContent_Populate(tmxlite)
+        add_subdirectory(${tmxlite_SOURCE_DIR}/tmxlite ${tmxlite_BINARY_DIR})
+    endif()
 endif()
 
 include(files.cmake)
@@ -68,6 +76,8 @@ endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_definitions(${PROJECT_NAME} PRIVATE RESOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/Resources")
+    # PTSD 框架預設資源（字體/音效等）的絕對路徑，供 ResolveAssetPath 後備使用，避免 CWD 問題
+    target_compile_definitions(${PROJECT_NAME} PRIVATE PTSD_ASSETS_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/PTSD/assets")
 else()
     message(FATAL_ERROR "relative RESOURCE_DIR is WIP, Please use `-DCMAKE_BUILD_TYPE=Debug` build for now.")
     # target_compile_definitions(${PROJECT_NAME} PRIVATE RESOURCE_DIR="${CMAKE_INSTALL_PREFIX}/Resources")

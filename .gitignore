@@ -489,8 +489,12 @@ FodyWeavers.xsd
 # Default build directory for CMake extension
 build/
 
-# Ignore 3rd party dependencies
-lib/
+# Ignore 3rd party dependencies（但保留 vendored 的 tmxlite 函式庫，
+# 讓 Windows / 助教端 build 不需連網下載）
+lib/*
+!lib/tmxlite/
+lib/tmxlite/*
+!lib/tmxlite/tmxlite/
 
 # Doxygen generated files
 docs/html/
